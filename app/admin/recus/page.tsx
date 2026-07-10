@@ -4,8 +4,11 @@ import Link from "next/link";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+
+import { useSupabaseCollection } from "../../../lib/data/useSupabaseCollection";
 
 type Devise = "CDF" | "USD";
 
@@ -344,8 +347,9 @@ export default function AdminRecusPage() {
   >([]);
 
   const [recus, setRecus] = useState<RecuNumerique[]>([]);
-  const [donneesChargees, setDonneesChargees] =
-    useState(false);
+  const [paiementsPrets, setPaiementsPrets] = useState(false);
+  const [recusPrets, setRecusPrets] = useState(false);
+  const derniereSignaturePaiements = useRef("");
 
   const [recuConsulte, setRecuConsulte] =
     useState<RecuNumerique | null>(null);
@@ -361,73 +365,45 @@ export default function AdminRecusPage() {
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
 
-  /*
-   * Chargement et création automatique des reçus.
-   */
+  useSupabaseCollection({
+    table: "paiements",
+    items: paiements,
+    setItems: setPaiements,
+    readOnly: true,
+    onReadyChange: setPaiementsPrets,
+    onError: setErreur,
+  });
+
+  useSupabaseCollection({
+    table: "recus",
+    items: recus,
+    setItems: setRecus,
+    localStorageKey: CLE_RECUS,
+    onReadyChange: setRecusPrets,
+    onError: setErreur,
+  });
+
   useEffect(() => {
-    try {
-      let paiementsCharges: PaiementProvincial[] = [];
-      let recusCharges: RecuNumerique[] = [];
-
-      const paiementsEnregistres =
-        window.localStorage.getItem(CLE_PAIEMENTS);
-
-      if (paiementsEnregistres) {
-        const donneesPaiements: PaiementProvincial[] =
-          JSON.parse(paiementsEnregistres);
-
-        if (Array.isArray(donneesPaiements)) {
-          paiementsCharges = donneesPaiements;
-        }
-      }
-
-      const recusEnregistres =
-        window.localStorage.getItem(CLE_RECUS);
-
-      if (recusEnregistres) {
-        const donneesRecus: RecuNumerique[] =
-          JSON.parse(recusEnregistres);
-
-        if (Array.isArray(donneesRecus)) {
-          recusCharges = donneesRecus;
-        }
-      }
-
-      const recusSynchronises = synchroniserRecus(
-        paiementsCharges,
-        recusCharges,
-      );
-
-      setPaiements(paiementsCharges);
-      setRecus(recusSynchronises);
-    } catch {
-      setErreur(
-        "Impossible de charger les paiements et les reçus.",
-      );
-    } finally {
-      setDonneesChargees(true);
-    }
-  }, []);
-
-  /*
-   * Sauvegarde automatique des reçus.
-   */
-  useEffect(() => {
-    if (!donneesChargees) {
+    if (!paiementsPrets || !recusPrets) {
       return;
     }
 
-    try {
-      window.localStorage.setItem(
-        CLE_RECUS,
-        JSON.stringify(recus),
-      );
-    } catch {
-      setErreur(
-        "Impossible d’enregistrer les reçus dans le navigateur.",
-      );
+    if (paiements.length === 0) {
+      return;
     }
-  }, [recus, donneesChargees]);
+
+    const signature = JSON.stringify(paiements);
+
+    if (derniereSignaturePaiements.current === signature) {
+      return;
+    }
+
+    derniereSignaturePaiements.current = signature;
+
+    setRecus((recusActuels) =>
+      synchroniserRecus(paiements, recusActuels),
+    );
+  }, [paiements, paiementsPrets, recusPrets]);
 
   const modesPaiementDisponibles = useMemo(() => {
     return Array.from(
@@ -540,49 +516,28 @@ export default function AdminRecusPage() {
     setErreur("");
     setMessage("");
 
-    try {
-      const paiementsEnregistres =
-        window.localStorage.getItem(CLE_PAIEMENTS);
+    const recusSynchronises = synchroniserRecus(
+      paiements,
+      recus,
+    );
 
-      let paiementsActualises: PaiementProvincial[] = [];
+    setRecus(recusSynchronises);
 
-      if (paiementsEnregistres) {
-        const donnees: PaiementProvincial[] =
-          JSON.parse(paiementsEnregistres);
-
-        if (Array.isArray(donnees)) {
-          paiementsActualises = donnees;
-        }
+    setRecuConsulte((ancienRecu) => {
+      if (!ancienRecu) {
+        return null;
       }
 
-      const recusSynchronises = synchroniserRecus(
-        paiementsActualises,
-        recus,
+      return (
+        recusSynchronises.find(
+          (recu) => recu.id === ancienRecu.id,
+        ) || null
       );
+    });
 
-      setPaiements(paiementsActualises);
-      setRecus(recusSynchronises);
-
-      setRecuConsulte((ancienRecu) => {
-        if (!ancienRecu) {
-          return null;
-        }
-
-        return (
-          recusSynchronises.find(
-            (recu) => recu.id === ancienRecu.id,
-          ) || null
-        );
-      });
-
-      setMessage(
-        `${recusSynchronises.length} reçu(s) synchronisé(s) avec les paiements.`,
-      );
-    } catch {
-      setErreur(
-        "Impossible d’actualiser les reçus.",
-      );
-    }
+    setMessage(
+      `${recusSynchronises.length} reçu(s) synchronisé(s) avec les paiements Supabase.`,
+    );
   }
 
   async function copierTexte(

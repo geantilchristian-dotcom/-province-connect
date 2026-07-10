@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { useSupabaseCollection } from "../../../lib/data/useSupabaseCollection";
+
 type StatutPersonne = "Actif" | "En attente" | "Suspendu" | "Archivé";
 
 type Personne = {
@@ -84,7 +86,6 @@ const communes = [
 
 export default function AdminPersonnesPage() {
   const [personnes, setPersonnes] = useState<Personne[]>([]);
-  const [donneesChargees, setDonneesChargees] = useState(false);
 
   const [formulaire, setFormulaire] =
     useState<FormulairePersonne>(formulaireInitial);
@@ -105,42 +106,13 @@ export default function AdminPersonnesPage() {
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
 
-  /*
-   * Chargement des personnes enregistrées.
-   * donneesChargees empêche l’écrasement du stockage par une liste vide.
-   */
-  useEffect(() => {
-    try {
-      const donneesEnregistrees =
-        window.localStorage.getItem(CLE_STOCKAGE);
-
-      if (donneesEnregistrees) {
-        const donnees: Personne[] = JSON.parse(donneesEnregistrees);
-
-        if (Array.isArray(donnees)) {
-          setPersonnes(donnees);
-        }
-      }
-    } catch {
-      setErreur("Impossible de lire les personnes enregistrées.");
-    } finally {
-      setDonneesChargees(true);
-    }
-  }, []);
-
-  /*
-   * Sauvegarde automatique après le chargement initial.
-   */
-  useEffect(() => {
-    if (!donneesChargees) {
-      return;
-    }
-
-    window.localStorage.setItem(
-      CLE_STOCKAGE,
-      JSON.stringify(personnes),
-    );
-  }, [personnes, donneesChargees]);
+  useSupabaseCollection({
+    table: "personnes",
+    items: personnes,
+    setItems: setPersonnes,
+    localStorageKey: CLE_STOCKAGE,
+    onError: setErreur,
+  });
 
   const statistiques = useMemo(() => {
     return {

@@ -4,8 +4,11 @@ import Link from "next/link";
 import {
   FormEvent,
   useEffect,
+  useMemo,
   useState,
 } from "react";
+
+import { createClient } from "../../lib/supabase/client";
 
 type StatutCarte =
   | "Brouillon"
@@ -142,7 +145,7 @@ function obtenirStyleStatut(statut: StatutCarte) {
 }
 
 export default function VerificationPage() {
-  const [cartes, setCartes] = useState<CarteProvinciale[]>([]);
+  const supabase = useMemo(() => createClient(), []);
   const [numero, setNumero] = useState("");
 
   const [resultat, setResultat] =
@@ -154,58 +157,24 @@ export default function VerificationPage() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
 
-  /*
-   * Chargement des cartes enregistrées.
-   * Une recherche automatique est également exécutée
-   * lorsque l’adresse contient ?numero=PC-COM-...
-   */
   useEffect(() => {
-    let cartesChargees: CarteProvinciale[] = [];
+    const parametres = new URLSearchParams(
+      window.location.search,
+    );
 
-    try {
-      const donneesEnregistrees =
-        window.localStorage.getItem(CLE_CARTES);
+    const numeroDansAdresse = parametres.get("numero") || "";
 
-      if (donneesEnregistrees) {
-        const donnees: CarteProvinciale[] =
-          JSON.parse(donneesEnregistrees);
-
-        if (Array.isArray(donnees)) {
-          cartesChargees = donnees;
-          setCartes(donnees);
-        }
-      }
-
-      const parametres = new URLSearchParams(
-        window.location.search,
-      );
-
-      const numeroDansAdresse =
-        parametres.get("numero") || "";
-
-      if (numeroDansAdresse) {
-        const numeroNettoye =
-          normaliserNumero(numeroDansAdresse);
-
-        setNumero(numeroNettoye);
-        rechercherDocument(
-          numeroNettoye,
-          cartesChargees,
-          false,
-        );
-      }
-    } catch {
-      setErreur(
-        "Impossible de charger le registre des documents.",
-      );
-    } finally {
+    if (numeroDansAdresse) {
+      const numeroNettoye = normaliserNumero(numeroDansAdresse);
+      setNumero(numeroNettoye);
+      void rechercherDocument(numeroNettoye, false);
+    } else {
       setChargement(false);
     }
   }, []);
 
-  function rechercherDocument(
+  async function rechercherDocument(
     valeur: string,
-    sourceCartes: CarteProvinciale[] = cartes,
     modifierAdresse = true,
   ) {
     const numeroNettoye = normaliserNumero(valeur);
@@ -216,37 +185,42 @@ export default function VerificationPage() {
     if (!numeroNettoye) {
       setResultat(null);
       setRechercheEffectuee(false);
+      setChargement(false);
       setErreur(
         "Veuillez saisir le numéro inscrit sur le document.",
       );
       return;
     }
 
-    /*
-     * Les brouillons ne doivent pas apparaître dans
-     * la vérification publique.
-     */
-    const documentTrouve =
-      sourceCartes.find(
-        (carte) =>
-          normaliserNumero(carte.numeroDocument) ===
-            numeroNettoye &&
-          carte.statut !== "Brouillon",
-      ) || null;
+    setChargement(true);
 
-    setResultat(documentTrouve);
+    const { data, error } = await supabase.rpc(
+      "verifier_document_public",
+      {
+        numero_recherche: numeroNettoye,
+      },
+    );
+
+    if (error) {
+      setResultat(null);
+      setRechercheEffectuee(false);
+      setErreur(
+        "Le service de vérification est momentanément indisponible.",
+      );
+      setChargement(false);
+      return;
+    }
+
+    setResultat((data as CarteProvinciale | null) || null);
     setRechercheEffectuee(true);
+    setChargement(false);
 
     if (modifierAdresse) {
       const nouvelleAdresse =
         `${window.location.pathname}?numero=` +
         encodeURIComponent(numeroNettoye);
 
-      window.history.replaceState(
-        {},
-        "",
-        nouvelleAdresse,
-      );
+      window.history.replaceState({}, "", nouvelleAdresse);
     }
   }
 

@@ -4,8 +4,11 @@ import Link from "next/link";
 import {
   FormEvent,
   useEffect,
+  useMemo,
   useState,
 } from "react";
+
+import { createClient } from "../../lib/supabase/client";
 
 type Devise = "CDF" | "USD";
 
@@ -173,8 +176,7 @@ function obtenirStyleStatut(
 }
 
 export default function VerificationRecuPage() {
-  const [recus, setRecus] = useState<RecuNumerique[]>([]);
-
+  const supabase = useMemo(() => createClient(), []);
   const [numeroRecu, setNumeroRecu] = useState("");
   const [codeVerification, setCodeVerification] =
     useState("");
@@ -189,64 +191,33 @@ export default function VerificationRecuPage() {
   const [erreur, setErreur] = useState("");
 
   useEffect(() => {
-    let recusCharges: RecuNumerique[] = [];
+    const parametres = new URLSearchParams(
+      window.location.search,
+    );
 
-    try {
-      const donneesEnregistrees =
-        window.localStorage.getItem(CLE_RECUS);
+    const numeroDansAdresse = parametres.get("numero") || "";
+    const codeDansAdresse = parametres.get("code") || "";
 
-      if (donneesEnregistrees) {
-        const donnees: RecuNumerique[] =
-          JSON.parse(donneesEnregistrees);
+    const numeroNettoye = normaliserValeur(numeroDansAdresse);
+    const codeNettoye = normaliserValeur(codeDansAdresse);
 
-        if (Array.isArray(donnees)) {
-          recusCharges = donnees;
-          setRecus(donnees);
-        }
-      }
+    setNumeroRecu(numeroNettoye);
+    setCodeVerification(codeNettoye);
 
-      const parametres = new URLSearchParams(
-        window.location.search,
+    if (numeroNettoye && codeNettoye) {
+      void rechercherRecu(
+        numeroNettoye,
+        codeNettoye,
+        false,
       );
-
-      const numeroDansAdresse =
-        parametres.get("numero") || "";
-
-      const codeDansAdresse =
-        parametres.get("code") || "";
-
-      if (numeroDansAdresse || codeDansAdresse) {
-        const numeroNettoye =
-          normaliserValeur(numeroDansAdresse);
-
-        const codeNettoye =
-          normaliserValeur(codeDansAdresse);
-
-        setNumeroRecu(numeroNettoye);
-        setCodeVerification(codeNettoye);
-
-        if (numeroNettoye && codeNettoye) {
-          rechercherRecu(
-            numeroNettoye,
-            codeNettoye,
-            recusCharges,
-            false,
-          );
-        }
-      }
-    } catch {
-      setErreur(
-        "Impossible de charger le registre des reçus.",
-      );
-    } finally {
+    } else {
       setChargement(false);
     }
   }, []);
 
-  function rechercherRecu(
+  async function rechercherRecu(
     numero: string,
     code: string,
-    sourceRecus: RecuNumerique[] = recus,
     modifierAdresse = true,
   ) {
     const numeroNettoye = normaliserValeur(numero);
@@ -259,32 +230,42 @@ export default function VerificationRecuPage() {
     if (!numeroNettoye) {
       setResultat(null);
       setRechercheEffectuee(false);
-      setErreur(
-        "Veuillez saisir le numéro du reçu.",
-      );
+      setChargement(false);
+      setErreur("Veuillez saisir le numéro du reçu.");
       return;
     }
 
     if (!codeNettoye) {
       setResultat(null);
       setRechercheEffectuee(false);
-      setErreur(
-        "Veuillez saisir le code de vérification.",
-      );
+      setChargement(false);
+      setErreur("Veuillez saisir le code de vérification.");
       return;
     }
 
-    const recuTrouve =
-      sourceRecus.find(
-        (recu) =>
-          normaliserValeur(recu.numeroRecu) ===
-            numeroNettoye &&
-          normaliserValeur(recu.codeVerification) ===
-            codeNettoye,
-      ) || null;
+    setChargement(true);
 
-    setResultat(recuTrouve);
+    const { data, error } = await supabase.rpc(
+      "verifier_recu_public",
+      {
+        numero_recherche: numeroNettoye,
+        code_recherche: codeNettoye,
+      },
+    );
+
+    if (error) {
+      setResultat(null);
+      setRechercheEffectuee(false);
+      setErreur(
+        "Le service de vérification des reçus est momentanément indisponible.",
+      );
+      setChargement(false);
+      return;
+    }
+
+    setResultat((data as RecuNumerique | null) || null);
     setRechercheEffectuee(true);
+    setChargement(false);
 
     if (modifierAdresse) {
       const nouvelleAdresse =
@@ -292,11 +273,7 @@ export default function VerificationRecuPage() {
         `${encodeURIComponent(numeroNettoye)}` +
         `&code=${encodeURIComponent(codeNettoye)}`;
 
-      window.history.replaceState(
-        {},
-        "",
-        nouvelleAdresse,
-      );
+      window.history.replaceState({}, "", nouvelleAdresse);
     }
   }
 

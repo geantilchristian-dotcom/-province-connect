@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 
+import { useSupabaseCollection } from "../../../lib/data/useSupabaseCollection";
+
 type Devise = "CDF" | "USD";
 
 type StatutPaiement =
@@ -218,8 +220,6 @@ export default function AdminPaiementsPage() {
     PaiementProvincial[]
   >([]);
 
-  const [donneesChargees, setDonneesChargees] =
-    useState(false);
 
   const [formulaire, setFormulaire] =
     useState<FormulairePaiement>(creerFormulaireInitial);
@@ -241,86 +241,37 @@ export default function AdminPaiementsPage() {
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
 
-  /*
-   * Chargement des données.
-   */
-  useEffect(() => {
-    try {
-      const personnesEnregistrees =
-        window.localStorage.getItem(CLE_PERSONNES);
+  useSupabaseCollection({
+    table: "personnes",
+    items: personnes,
+    setItems: setPersonnes,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-      if (personnesEnregistrees) {
-        const donnees: Personne[] =
-          JSON.parse(personnesEnregistrees);
+  useSupabaseCollection({
+    table: "activites",
+    items: activites,
+    setItems: setActivites,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-        if (Array.isArray(donnees)) {
-          setPersonnes(donnees);
-        }
-      }
+  useSupabaseCollection({
+    table: "taxes",
+    items: taxes,
+    setItems: setTaxes,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-      const activitesEnregistrees =
-        window.localStorage.getItem(CLE_ACTIVITES);
-
-      if (activitesEnregistrees) {
-        const donnees: Activite[] =
-          JSON.parse(activitesEnregistrees);
-
-        if (Array.isArray(donnees)) {
-          setActivites(donnees);
-        }
-      }
-
-      const taxesEnregistrees =
-        window.localStorage.getItem(CLE_TAXES);
-
-      if (taxesEnregistrees) {
-        const donnees: TaxeProvinciale[] =
-          JSON.parse(taxesEnregistrees);
-
-        if (Array.isArray(donnees)) {
-          setTaxes(donnees);
-        }
-      }
-
-      const paiementsEnregistres =
-        window.localStorage.getItem(CLE_PAIEMENTS);
-
-      if (paiementsEnregistres) {
-        const donnees: PaiementProvincial[] =
-          JSON.parse(paiementsEnregistres);
-
-        if (Array.isArray(donnees)) {
-          setPaiements(donnees);
-        }
-      }
-    } catch {
-      setErreur(
-        "Impossible de lire les données enregistrées.",
-      );
-    } finally {
-      setDonneesChargees(true);
-    }
-  }, []);
-
-  /*
-   * Sauvegarde automatique des paiements.
-   */
-  useEffect(() => {
-    if (!donneesChargees) {
-      return;
-    }
-
-    try {
-      window.localStorage.setItem(
-        CLE_PAIEMENTS,
-        JSON.stringify(paiements),
-      );
-    } catch {
-      setErreur(
-        "Impossible d’enregistrer les paiements dans le navigateur.",
-      );
-    }
-  }, [paiements, donneesChargees]);
+  useSupabaseCollection({
+    table: "paiements",
+    items: paiements,
+    setItems: setPaiements,
+    localStorageKey: CLE_PAIEMENTS,
+    onError: setErreur,
+  });
 
   const personnesDisponibles = useMemo(() => {
     return personnes

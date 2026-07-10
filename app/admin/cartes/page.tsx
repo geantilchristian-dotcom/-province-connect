@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { useSupabaseCollection } from "../../../lib/data/useSupabaseCollection";
+
 type StatutCarte =
   | "Brouillon"
   | "Valide"
@@ -237,7 +239,6 @@ export default function AdminCartesPage() {
   const [activites, setActivites] = useState<Activite[]>([]);
   const [cartes, setCartes] = useState<CarteProvinciale[]>([]);
 
-  const [donneesChargees, setDonneesChargees] = useState(false);
 
   const [formulaire, setFormulaire] =
     useState<FormulaireCarte>(creerFormulaireInitial);
@@ -258,90 +259,44 @@ export default function AdminCartesPage() {
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
 
-  /*
-   * Chargement des personnes, activités et cartes.
-   */
-  useEffect(() => {
-    try {
-      const personnesEnregistrees =
-        window.localStorage.getItem(CLE_PERSONNES);
+  useSupabaseCollection({
+    table: "personnes",
+    items: personnes,
+    setItems: setPersonnes,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-      if (personnesEnregistrees) {
-        const donneesPersonnes: Personne[] =
-          JSON.parse(personnesEnregistrees);
+  useSupabaseCollection({
+    table: "activites",
+    items: activites,
+    setItems: setActivites,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-        if (Array.isArray(donneesPersonnes)) {
-          setPersonnes(donneesPersonnes);
-        }
-      }
+  useSupabaseCollection({
+    table: "cartes",
+    items: cartes,
+    setItems: setCartes,
+    localStorageKey: CLE_CARTES,
+    normaliser: (donnees) => {
+      const aujourdHui = obtenirDateAujourdhui();
 
-      const activitesEnregistrees =
-        window.localStorage.getItem(CLE_ACTIVITES);
-
-      if (activitesEnregistrees) {
-        const donneesActivites: Activite[] =
-          JSON.parse(activitesEnregistrees);
-
-        if (Array.isArray(donneesActivites)) {
-          setActivites(donneesActivites);
-        }
-      }
-
-      const cartesEnregistrees =
-        window.localStorage.getItem(CLE_CARTES);
-
-      if (cartesEnregistrees) {
-        const donneesCartes: CarteProvinciale[] =
-          JSON.parse(cartesEnregistrees);
-
-        if (Array.isArray(donneesCartes)) {
-          const aujourdHui = obtenirDateAujourdhui();
-
-          const cartesNormalisees = donneesCartes.map((carte) => {
-            if (
-              carte.statut === "Valide" &&
-              carte.dateExpiration &&
-              carte.dateExpiration < aujourdHui
-            ) {
-              return {
-                ...carte,
-                statut: "Expiré" as StatutCarte,
-                updatedAt: new Date().toISOString(),
-              };
+      return donnees.map((carte) =>
+        carte.statut === "Valide" &&
+        carte.dateExpiration &&
+        carte.dateExpiration < aujourdHui
+          ? {
+              ...carte,
+              statut: "Expiré" as StatutCarte,
+              updatedAt: new Date().toISOString(),
             }
-
-            return carte;
-          });
-
-          setCartes(cartesNormalisees);
-        }
-      }
-    } catch {
-      setErreur("Impossible de lire les données enregistrées.");
-    } finally {
-      setDonneesChargees(true);
-    }
-  }, []);
-
-  /*
-   * Sauvegarde automatique des cartes.
-   */
-  useEffect(() => {
-    if (!donneesChargees) {
-      return;
-    }
-
-    try {
-      window.localStorage.setItem(
-        CLE_CARTES,
-        JSON.stringify(cartes),
+          : carte,
       );
-    } catch {
-      setErreur(
-        "Impossible d’enregistrer les cartes dans le navigateur.",
-      );
-    }
-  }, [cartes, donneesChargees]);
+    },
+    onError: setErreur,
+  });
 
   const personnesDisponibles = useMemo(() => {
     return personnes

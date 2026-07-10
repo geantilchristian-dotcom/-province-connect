@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { useSupabaseCollection } from "../../../lib/data/useSupabaseCollection";
+
 type StatutActivite =
   | "En attente"
   | "Autorisé"
@@ -143,7 +145,6 @@ const statuts: StatutActivite[] = [
 export default function AdminActivitesPage() {
   const [activites, setActivites] = useState<Activite[]>([]);
   const [personnes, setPersonnes] = useState<Personne[]>([]);
-  const [donneesChargees, setDonneesChargees] = useState(false);
 
   const [formulaire, setFormulaire] =
     useState<FormulaireActivite>(formulaireInitial);
@@ -164,60 +165,27 @@ export default function AdminActivitesPage() {
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
 
-  /*
-   * Chargement des personnes et des activités.
-   */
-  useEffect(() => {
-    try {
-      const personnesEnregistrees =
-        window.localStorage.getItem(CLE_PERSONNES);
+  useSupabaseCollection({
+    table: "personnes",
+    items: personnes,
+    setItems: setPersonnes,
+    readOnly: true,
+    normaliser: (donnees) =>
+      [...donnees]
+        .filter((personne) => personne.statut !== "Archivé")
+        .sort((a, b) =>
+          a.nomComplet.localeCompare(b.nomComplet, "fr"),
+        ),
+    onError: setErreur,
+  });
 
-      if (personnesEnregistrees) {
-        const donneesPersonnes: Personne[] =
-          JSON.parse(personnesEnregistrees);
-
-        if (Array.isArray(donneesPersonnes)) {
-          const personnesDisponibles = donneesPersonnes
-            .filter((personne) => personne.statut !== "Archivé")
-            .sort((a, b) =>
-              a.nomComplet.localeCompare(b.nomComplet, "fr"),
-            );
-
-          setPersonnes(personnesDisponibles);
-        }
-      }
-
-      const activitesEnregistrees =
-        window.localStorage.getItem(CLE_ACTIVITES);
-
-      if (activitesEnregistrees) {
-        const donneesActivites: Activite[] =
-          JSON.parse(activitesEnregistrees);
-
-        if (Array.isArray(donneesActivites)) {
-          setActivites(donneesActivites);
-        }
-      }
-    } catch {
-      setErreur("Impossible de lire les données enregistrées.");
-    } finally {
-      setDonneesChargees(true);
-    }
-  }, []);
-
-  /*
-   * Enregistrement automatique des activités.
-   */
-  useEffect(() => {
-    if (!donneesChargees) {
-      return;
-    }
-
-    window.localStorage.setItem(
-      CLE_ACTIVITES,
-      JSON.stringify(activites),
-    );
-  }, [activites, donneesChargees]);
+  useSupabaseCollection({
+    table: "activites",
+    items: activites,
+    setItems: setActivites,
+    localStorageKey: CLE_ACTIVITES,
+    onError: setErreur,
+  });
 
   const statistiques = useMemo(() => {
     return {

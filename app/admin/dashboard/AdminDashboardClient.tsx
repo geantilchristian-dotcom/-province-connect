@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 
+import { useSupabaseCollection } from "../../../lib/data/useSupabaseCollection";
+
 import { createClient } from "../../../lib/supabase/client";
 import NotificationButton from "../../../components/NotificationButton";
 
@@ -219,24 +221,6 @@ const MODULES: ModuleApplication[] = [
   },
 ];
 
-function lireTableauLocal<T>(cle: string): T[] {
-  try {
-    const valeur = window.localStorage.getItem(cle);
-
-    if (!valeur) {
-      return [];
-    }
-
-    const donnees = JSON.parse(valeur);
-
-    return Array.isArray(donnees)
-      ? (donnees as T[])
-      : [];
-  } catch {
-    return [];
-  }
-}
-
 function formaterNombre(valeur: number) {
   return new Intl.NumberFormat("fr-FR").format(
     valeur,
@@ -382,11 +366,12 @@ export default function AdminDashboardClient({
   const [communiques, setCommuniques] =
     useState<Communique[]>([]);
 
-  const [nombreTaxes, setNombreTaxes] =
-    useState(0);
+  const [taxes, setTaxes] = useState<{ id: string }[]>([]);
 
-  const [nombreRecus, setNombreRecus] =
-    useState(0);
+  const [recus, setRecus] = useState<{ id: string }[]>([]);
+
+  const nombreTaxes = taxes.length;
+  const nombreRecus = recus.length;
 
   const [
     deconnexionEnCours,
@@ -398,85 +383,61 @@ export default function AdminDashboardClient({
 
   const [erreur, setErreur] = useState("");
 
-  const chargerDonneesLocales =
-    useCallback(() => {
-      setPersonnes(
-        lireTableauLocal<Personne>(
-          CLE_PERSONNES,
-        ),
-      );
+  useSupabaseCollection({
+    table: "personnes",
+    items: personnes,
+    setItems: setPersonnes,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-      setActivites(
-        lireTableauLocal<Activite>(
-          CLE_ACTIVITES,
-        ),
-      );
+  useSupabaseCollection({
+    table: "activites",
+    items: activites,
+    setItems: setActivites,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-      setCartes(
-        lireTableauLocal<Carte>(
-          CLE_CARTES,
-        ),
-      );
+  useSupabaseCollection({
+    table: "cartes",
+    items: cartes,
+    setItems: setCartes,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-      setPaiements(
-        lireTableauLocal<Paiement>(
-          CLE_PAIEMENTS,
-        ),
-      );
+  useSupabaseCollection({
+    table: "paiements",
+    items: paiements,
+    setItems: setPaiements,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-      setCommuniques(
-        lireTableauLocal<Communique>(
-          CLE_COMMUNIQUES,
-        ),
-      );
+  useSupabaseCollection({
+    table: "communiques",
+    items: communiques,
+    setItems: setCommuniques,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-      setNombreTaxes(
-        lireTableauLocal<unknown>(
-          CLE_TAXES,
-        ).length,
-      );
+  useSupabaseCollection({
+    table: "taxes",
+    items: taxes,
+    setItems: setTaxes,
+    readOnly: true,
+    onError: setErreur,
+  });
 
-      setNombreRecus(
-        lireTableauLocal<unknown>(
-          CLE_RECUS,
-        ).length,
-      );
-    }, []);
-
-  useEffect(() => {
-    chargerDonneesLocales();
-
-    function actualiserStockage(
-      event: StorageEvent,
-    ) {
-      if (
-        event.key === null ||
-        [
-          CLE_PERSONNES,
-          CLE_ACTIVITES,
-          CLE_CARTES,
-          CLE_TAXES,
-          CLE_PAIEMENTS,
-          CLE_RECUS,
-          CLE_COMMUNIQUES,
-        ].includes(event.key)
-      ) {
-        chargerDonneesLocales();
-      }
-    }
-
-    window.addEventListener(
-      "storage",
-      actualiserStockage,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "storage",
-        actualiserStockage,
-      );
-    };
-  }, [chargerDonneesLocales]);
+  useSupabaseCollection({
+    table: "recus",
+    items: recus,
+    setItems: setRecus,
+    readOnly: true,
+    onError: setErreur,
+  });
 
   const modulesAutorises = useMemo(() => {
     if (!profil) {
@@ -1315,10 +1276,10 @@ export default function AdminDashboardClient({
 
                     <button
                       type="button"
-                      onClick={chargerDonneesLocales}
+                      onClick={() => window.location.reload()}
                       className="inline-flex min-h-12 items-center justify-center rounded-xl border border-black/10 px-5 font-extrabold transition hover:bg-neutral-100"
                     >
-                      Actualiser les données
+                      Recharger l’interface
                     </button>
                   </div>
                 </div>

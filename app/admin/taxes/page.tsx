@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 
+import { useSupabaseCollection } from "../../../lib/data/useSupabaseCollection";
+
 type Devise = "CDF" | "USD";
 
 type StatutTaxe =
@@ -154,7 +156,6 @@ function formaterMontant(montant: number, devise: Devise) {
 
 export default function AdminTaxesPage() {
   const [taxes, setTaxes] = useState<TaxeProvinciale[]>([]);
-  const [donneesChargees, setDonneesChargees] = useState(false);
 
   const [formulaire, setFormulaire] =
     useState<FormulaireTaxe>(creerFormulaireInitial);
@@ -178,50 +179,13 @@ export default function AdminTaxesPage() {
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
 
-  /*
-   * Chargement des taxes enregistrées.
-   */
-  useEffect(() => {
-    try {
-      const donneesEnregistrees =
-        window.localStorage.getItem(CLE_TAXES);
-
-      if (donneesEnregistrees) {
-        const donnees: TaxeProvinciale[] =
-          JSON.parse(donneesEnregistrees);
-
-        if (Array.isArray(donnees)) {
-          setTaxes(donnees);
-        }
-      }
-    } catch {
-      setErreur(
-        "Impossible de lire les taxes enregistrées.",
-      );
-    } finally {
-      setDonneesChargees(true);
-    }
-  }, []);
-
-  /*
-   * Sauvegarde automatique après le chargement.
-   */
-  useEffect(() => {
-    if (!donneesChargees) {
-      return;
-    }
-
-    try {
-      window.localStorage.setItem(
-        CLE_TAXES,
-        JSON.stringify(taxes),
-      );
-    } catch {
-      setErreur(
-        "Impossible d’enregistrer les taxes dans le navigateur.",
-      );
-    }
-  }, [taxes, donneesChargees]);
+  useSupabaseCollection({
+    table: "taxes",
+    items: taxes,
+    setItems: setTaxes,
+    localStorageKey: CLE_TAXES,
+    onError: setErreur,
+  });
 
   const statistiques = useMemo(() => {
     return {
