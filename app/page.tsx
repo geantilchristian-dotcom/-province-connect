@@ -321,17 +321,17 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-white font-sans text-neutral-950 antialiased">
+    <main className="min-h-screen bg-white font-sans text-neutral-950 antialiased selection:bg-orange-200 selection:text-black">
       {/* Barre de navigation */}
-      <header className="sticky top-0 z-40 border-b border-orange-600 bg-orange-500 shadow-md">
-        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-40 border-b border-orange-700/40 bg-[#f26522] shadow-[0_6px_24px_rgba(0,0,0,0.16)]">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
           <a href="#accueil" className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black text-sm font-black text-white shadow-lg">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black text-xs font-black tracking-wide text-white shadow-lg sm:h-11 sm:w-11 sm:text-sm">
               PC
             </div>
 
             <div className="min-w-0">
-              <h1 className="truncate text-base font-black tracking-tight text-black sm:text-lg">
+              <h1 className="truncate text-[15px] font-black tracking-[-0.02em] text-black sm:text-lg">
                 Province Connect
               </h1>
 
@@ -377,39 +377,33 @@ export default function Home() {
       {/* Accueil */}
       <section
         id="accueil"
-        className="relative overflow-hidden bg-gradient-to-br from-black via-neutral-950 to-green-950"
+        className="relative overflow-hidden bg-gradient-to-br from-[#050505] via-[#0d0d0d] to-[#07351f]"
       >
         <div className="absolute -left-40 top-20 h-96 w-96 rounded-full bg-orange-500/15 blur-3xl" />
         <div className="absolute -right-40 top-0 h-[520px] w-[520px] rounded-full bg-green-600/20 blur-3xl" />
 
-        <div className="relative mx-auto w-full max-w-[1600px] px-4 pb-16 pt-14 sm:px-6 md:pt-16 lg:px-8 lg:pb-20">
+        <div className="relative mx-auto w-full max-w-[1600px] px-4 pb-11 pt-8 sm:px-6 sm:pb-14 sm:pt-12 lg:px-8 lg:pb-20">
           <div className="mx-auto w-full text-center">
-            <h2 className="mx-auto text-[clamp(2rem,3.7vw,3.35rem)] font-black leading-[1.08] tracking-[-0.045em] text-white xl:whitespace-nowrap">
+            <h2 className="mx-auto max-w-6xl text-[clamp(1.75rem,7.4vw,3.35rem)] font-black leading-[1.08] tracking-[-0.04em] text-white xl:whitespace-nowrap">
               Une province mieux organisée, plus transparente et connectée
             </h2>
 
-            <p className="mx-auto mt-6 max-w-4xl text-base leading-8 text-neutral-300 md:text-lg">
-              Province Connect centralise l’enregistrement, la délivrance
-              et la vérification des cartes, permis, autorisations,
-              reçus et informations officielles de la province.
-            </p>
-
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <div className="mx-auto mt-6 grid w-full max-w-md grid-cols-2 gap-2.5 sm:mt-8 sm:flex sm:max-w-none sm:justify-center sm:gap-3">
               <button
                 type="button"
                 onClick={() => setVerificationVisible(true)}
-                className="group inline-flex min-h-14 items-center justify-center gap-3 rounded-full bg-orange-500 px-8 text-sm font-extrabold text-white shadow-xl shadow-orange-950/30 transition duration-300 hover:-translate-y-1 hover:bg-orange-400"
+                className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#f26522] px-3 text-center text-[12px] font-black leading-tight text-white shadow-lg shadow-orange-950/25 transition duration-300 hover:-translate-y-0.5 hover:bg-orange-500 sm:min-h-14 sm:gap-3 sm:rounded-full sm:px-8 sm:text-sm"
               >
                 Vérifier un document
 
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg transition-transform group-hover:translate-x-1">
+                <span className="hidden h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg transition-transform group-hover:translate-x-1 sm:flex">
                   →
                 </span>
               </button>
 
               <a
                 href="/verification-recu"
-                className="inline-flex min-h-14 items-center justify-center rounded-full border border-white/20 bg-white/10 px-8 text-sm font-extrabold text-white backdrop-blur transition hover:-translate-y-1 hover:border-green-400 hover:bg-green-700"
+                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-3 text-center text-[12px] font-black leading-tight text-white backdrop-blur transition hover:-translate-y-0.5 hover:border-emerald-400 hover:bg-emerald-800 sm:min-h-14 sm:rounded-full sm:px-8 sm:text-sm"
               >
                 Vérifier un reçu
               </a>
@@ -419,17 +413,17 @@ export default function Home() {
           {/* Carrousel des communiqués */}
           <div
             id="communiques"
-            className="mt-14 scroll-mt-24"
+            className="mt-10 scroll-mt-24 sm:mt-14"
             onMouseEnter={() => setCarouselEnPause(true)}
             onMouseLeave={() => setCarouselEnPause(false)}
           >
-            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-400">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400 sm:text-xs">
                   Actualités de la province
                 </p>
 
-                <h3 className="mt-2 text-2xl font-black tracking-tight text-white md:text-3xl">
+                <h3 className="mt-2 text-xl font-black leading-tight tracking-[-0.025em] text-white sm:text-2xl md:text-3xl">
                   Communiqués et annonces officielles
                 </h3>
               </div>
@@ -457,7 +451,7 @@ export default function Home() {
               )}
             </div>
 
-            <div className="overflow-hidden rounded-[30px] border border-white/10 bg-black shadow-2xl shadow-black/40">
+            <div className="overflow-hidden rounded-[22px] border border-white/10 bg-black shadow-2xl shadow-black/40 sm:rounded-[30px]">
               <div
                 className="flex transition-transform duration-700 ease-in-out"
                 style={{
@@ -467,7 +461,7 @@ export default function Home() {
                 {communiques.map((communique) => (
                   <article
                     key={communique.id}
-                    className="relative min-h-[430px] min-w-full overflow-hidden"
+                    className="relative h-[320px] min-w-full overflow-hidden sm:h-[430px] md:h-[480px]"
                   >
                     <img
                       src={communique.image}
@@ -475,36 +469,36 @@ export default function Home() {
                       className="absolute inset-0 h-full w-full object-cover"
                     />
 
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/75 to-black/20" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-black/25" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
 
-                    <div className="relative flex min-h-[430px] items-end p-6 sm:p-9 md:p-12 lg:items-center">
+                    <div className="relative flex h-[320px] items-end p-5 sm:h-[430px] sm:p-9 md:h-[480px] md:p-12 lg:items-center">
                       <div className="max-w-3xl">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className="rounded-full bg-orange-500 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                          <span className="rounded-full bg-[#f26522] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.11em] text-white sm:px-4 sm:py-2 sm:text-[11px]">
                             {communique.categorie}
                           </span>
 
-                          <span className="text-sm font-semibold text-white/80">
+                          <span className="text-[11px] font-bold text-white/80 sm:text-sm">
                             {communique.date}
                           </span>
                         </div>
 
-                        <h4 className="mt-6 text-3xl font-black leading-tight tracking-[-0.035em] text-white md:text-5xl">
+                        <h4 className="mt-4 line-clamp-2 text-2xl font-black leading-[1.05] tracking-[-0.035em] text-white sm:mt-6 sm:text-3xl md:text-5xl">
                           {communique.titre}
                         </h4>
 
-                        <p className="mt-5 max-w-2xl text-base leading-7 text-white/80 md:text-lg">
+                        <p className="mt-5 hidden max-w-2xl text-base leading-7 text-white/80 sm:block md:text-lg">
                           {communique.description}
                         </p>
 
-                        <div className="mt-7 flex flex-wrap items-center gap-4">
+                        <div className="mt-5 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4">
                           <button
                             type="button"
                             onClick={() =>
                               setCommuniqueConsulte(communique)
                             }
-                            className="group inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-white px-6 text-sm font-extrabold text-black transition hover:bg-orange-500 hover:text-white"
+                            className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-xs font-black text-black shadow-lg transition hover:bg-[#f26522] hover:text-white sm:min-h-12 sm:gap-3 sm:px-6 sm:text-sm"
                           >
                             Lire le communiqué
 
@@ -513,7 +507,7 @@ export default function Home() {
                             </span>
                           </button>
 
-                          <span className="text-xs font-bold uppercase tracking-wider text-white/60">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 sm:text-xs">
                             Réf. {communique.reference}
                           </span>
                         </div>
@@ -525,7 +519,7 @@ export default function Home() {
             </div>
 
             {communiques.length > 1 && (
-              <div className="mt-5 flex items-center justify-between sm:justify-center">
+              <div className="mt-4 flex items-center justify-between sm:mt-5 sm:justify-center">
                 <div className="flex items-center gap-2">
                   {communiques.map((communique, index) => (
                     <button
@@ -546,7 +540,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={communiquePrecedent}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xl text-white"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-lg text-white backdrop-blur"
                     aria-label="Affiche précédente"
                   >
                     ‹
@@ -555,7 +549,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={communiqueSuivant}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xl text-white"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-lg text-white backdrop-blur"
                     aria-label="Affiche suivante"
                   >
                     ›
