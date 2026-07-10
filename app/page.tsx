@@ -390,17 +390,7 @@ export default function Home() {
 
         <div className="relative mx-auto w-full max-w-[1600px] px-4 pb-16 pt-14 sm:px-6 md:pt-16 lg:px-8 lg:pb-20">
           <div className="mx-auto w-full text-center">
-            <h2 className="mx-auto text-[clamp(2rem,3.7vw,3.35rem)] font-black leading-[1.08] tracking-[-0.045em] text-white xl:whitespace-nowrap">
-              Une province mieux organisée, plus transparente et connectée
-            </h2>
-
-            <p className="mx-auto mt-6 max-w-4xl text-base leading-8 text-neutral-300 md:text-lg">
-              Province Connect centralise l’enregistrement, la délivrance
-              et la vérification des cartes, permis, autorisations,
-              reçus et informations officielles de la province.
-            </p>
-
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <div className="flex flex-col justify-center gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={() => setVerificationVisible(true)}
