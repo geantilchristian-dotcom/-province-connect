@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import BanniereConsentement from "@/components/BanniereConsentement";
+import NotificationButton from "@/components/NotificationButton";
 
 type StatutCommunique = "Brouillon" | "Publié";
 
@@ -35,7 +38,7 @@ type TypeCarte = {
   description: string;
 };
 
-const CLE_STOCKAGE = "province-connect-communiques";
+// CLE_STOCKAGE supprimé — données désormais dans Supabase
 
 const communiquesDemonstration: CommuniquePublic[] = [
   {
@@ -199,83 +202,52 @@ export default function Home() {
   const [messageVerification, setMessageVerification] = useState("");
 
   /*
-   * Récupération des communiqués publiés par l’administration.
+   * Récupération en temps réel des communiqués publiés depuis Supabase.
    */
   useEffect(() => {
-    function chargerCommuniques() {
-      const donneesEnregistrees =
-        window.localStorage.getItem(CLE_STOCKAGE);
+    const supabase = createClient();
 
-      if (!donneesEnregistrees) {
-        setCommuniques(communiquesDemonstration);
-        return;
-      }
+    async function chargerCommuniques() {
+      const { data } = await supabase
+        .from("communiques")
+        .select("*")
+        .eq("statut", "Publié")
+        .order("date_publication", { ascending: false });
 
-      try {
-        const donnees: CommuniqueAdmin[] =
-          JSON.parse(donneesEnregistrees);
-
-        if (!Array.isArray(donnees)) {
-          setCommuniques(communiquesDemonstration);
-          return;
-        }
-
-        const communiquesPublies = donnees
-          .filter(
-            (communique) =>
-              communique.statut === "Publié" &&
-              communique.titre &&
-              communique.image,
-          )
-          .sort((premier, deuxieme) => {
-            const datePremier = new Date(
-              `${premier.datePublication}T00:00:00`,
-            ).getTime();
-
-            const dateDeuxieme = new Date(
-              `${deuxieme.datePublication}T00:00:00`,
-            ).getTime();
-
-            return dateDeuxieme - datePremier;
-          })
-          .map<CommuniquePublic>((communique) => ({
-            id: communique.id,
-            categorie: communique.categorie,
-            titre: communique.titre,
-            description: communique.resume,
-            contenu: communique.contenu,
-            date: formaterDatePublique(communique.datePublication),
-            reference: communique.reference,
-            image: communique.image,
-          }));
-
-        setCommuniques(
-          communiquesPublies.length > 0
-            ? communiquesPublies
-            : communiquesDemonstration,
-        );
-
+      if (data && data.length > 0) {
+        const communiquesFormates = data.map<CommuniquePublic>((c) => ({
+          id: c.id as string,
+          categorie: c.categorie as string,
+          titre: c.titre as string,
+          description: c.resume as string,
+          contenu: c.contenu as string,
+          date: formaterDatePublique(c.date_publication as string),
+          reference: c.reference as string,
+          image: c.image as string,
+        }));
+        setCommuniques(communiquesFormates);
         setCommuniqueActif(0);
-      } catch {
+      } else {
         setCommuniques(communiquesDemonstration);
       }
     }
 
-    chargerCommuniques();
+    void chargerCommuniques();
 
-    function actualiserDepuisAutreOnglet(event: StorageEvent) {
-      if (event.key === CLE_STOCKAGE) {
-        chargerCommuniques();
-      }
-    }
-
-    window.addEventListener("storage", actualiserDepuisAutreOnglet);
+    // Abonnement temps réel — actualise dès qu'un communiqué change
+    const canal = supabase
+      .channel("communiques-publiques")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "communiques" },
+        () => {
+          void chargerCommuniques();
+        },
+      )
+      .subscribe();
 
     return () => {
-      window.removeEventListener(
-        "storage",
-        actualiserDepuisAutreOnglet,
-      );
+      void supabase.removeChannel(canal);
     };
   }, []);
 
@@ -401,6 +373,9 @@ export default function Home() {
               Contact
             </a>
           </nav>
+
+          {/* Cloche de notifications */}
+          <NotificationButton />
 
         </div>
       </header>
@@ -1037,6 +1012,8 @@ export default function Home() {
           </div>
         </div>
       )}
+      {/* Bannière de consentement cookies + notifications */}
+      <BanniereConsentement />
     </main>
   );
 }

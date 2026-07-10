@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type StatutCommunique = "Brouillon" | "Publié";
 
@@ -35,8 +36,6 @@ type FormulaireCommunique = {
   statut: StatutCommunique;
 };
 
-const CLE_STOCKAGE = "province-connect-communiques";
-
 const formulaireInitial: FormulaireCommunique = {
   titre: "",
   categorie: "Communiqué officiel",
@@ -58,82 +57,88 @@ const categories = [
   "Annonce",
 ];
 
+function mapperDepuisSupabase(row: Record<string, unknown>): Communique {
+  return {
+    id: row.id as string,
+    titre: row.titre as string,
+    categorie: row.categorie as string,
+    resume: row.resume as string,
+    contenu: row.contenu as string,
+    datePublication: (row.date_publication as string) ?? "",
+    reference: row.reference as string,
+    image: row.image as string,
+    statut: row.statut as StatutCommunique,
+    createdAt: row.created_at as string,
+  };
+}
+
 export default function AdminCommuniquesPage() {
   const [communiques, setCommuniques] = useState<Communique[]>([]);
   const [formulaire, setFormulaire] =
     useState<FormulaireCommunique>(formulaireInitial);
-
   const [recherche, setRecherche] = useState("");
   const [filtreStatut, setFiltreStatut] = useState("Tous");
   const [formulaireVisible, setFormulaireVisible] = useState(false);
   const [communiqueEnModification, setCommuniqueEnModification] = useState<
     string | null
   >(null);
-
+  const [chargement, setChargement] = useState(true);
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
+  const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
 
+  // ── Chargement initial depuis Supabase ──────────────────────────────
   useEffect(() => {
-    const donneesEnregistrees = window.localStorage.getItem(CLE_STOCKAGE);
+    async function charger() {
+      setChargement(true);
+      const supabase = createClient();
 
-    if (!donneesEnregistrees) {
-      return;
+      const { data, error } = await supabase
+        .from("communiques")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        setErreur("Impossible de charger les communiqués.");
+      } else {
+        setCommuniques(
+          (data as Record<string, unknown>[]).map(mapperDepuisSupabase),
+        );
+      }
+
+      setChargement(false);
     }
 
-    try {
-      const donnees: Communique[] = JSON.parse(donneesEnregistrees);
-      setCommuniques(donnees);
-    } catch {
-      setErreur("Impossible de lire les communiqués enregistrés.");
-    }
+    void charger();
   }, []);
 
-  useEffect(() => {
-    window.localStorage.setItem(CLE_STOCKAGE, JSON.stringify(communiques));
-  }, [communiques]);
-
+  // ── Statistiques ────────────────────────────────────────────────────
   const statistiques = useMemo(() => {
-    const publies = communiques.filter(
-      (communique) => communique.statut === "Publié",
-    ).length;
-
+    const publies = communiques.filter((c) => c.statut === "Publié").length;
     const brouillons = communiques.filter(
-      (communique) => communique.statut === "Brouillon",
+      (c) => c.statut === "Brouillon",
     ).length;
-
-    return {
-      total: communiques.length,
-      publies,
-      brouillons,
-    };
+    return { total: communiques.length, publies, brouillons };
   }, [communiques]);
 
+  // ── Filtrage ────────────────────────────────────────────────────────
   const communiquesFiltres = useMemo(() => {
     const terme = recherche.trim().toLowerCase();
-
-    return communiques.filter((communique) => {
+    return communiques.filter((c) => {
       const correspondRecherche =
         !terme ||
-        communique.titre.toLowerCase().includes(terme) ||
-        communique.reference.toLowerCase().includes(terme) ||
-        communique.categorie.toLowerCase().includes(terme);
-
+        c.titre.toLowerCase().includes(terme) ||
+        c.reference.toLowerCase().includes(terme) ||
+        c.categorie.toLowerCase().includes(terme);
       const correspondStatut =
-        filtreStatut === "Tous" || communique.statut === filtreStatut;
-
+        filtreStatut === "Tous" || c.statut === filtreStatut;
       return correspondRecherche && correspondStatut;
     });
   }, [communiques, recherche, filtreStatut]);
 
-  function modifierChamp(
-    champ: keyof FormulaireCommunique,
-    valeur: string,
-  ) {
-    setFormulaire((ancienFormulaire) => ({
-      ...ancienFormulaire,
-      [champ]: valeur,
-    }));
-
+  // ── Formulaire ──────────────────────────────────────────────────────
+  function modifierChamp(champ: keyof FormulaireCommunique, valeur: string) {
+    setFormulaire((ancien) => ({ ...ancien, [champ]: valeur }));
     setErreur("");
     setMessage("");
   }
@@ -141,43 +146,27 @@ export default function AdminCommuniquesPage() {
   function genererReference() {
     const annee = new Date().getFullYear();
     const numero = String(communiques.length + 1).padStart(4, "0");
-
     modifierChamp("reference", `PC-COM-${annee}-${numero}`);
   }
 
   function importerImage(event: ChangeEvent<HTMLInputElement>) {
     const fichier = event.target.files?.[0];
-
-    if (!fichier) {
-      return;
-    }
-
+    if (!fichier) return;
     if (!fichier.type.startsWith("image/")) {
       setErreur("Veuillez sélectionner un fichier image valide.");
       return;
     }
-
     const tailleMaximale = 3 * 1024 * 1024;
-
     if (fichier.size > tailleMaximale) {
-      setErreur("L’image ne doit pas dépasser 3 Mo.");
+      setErreur("L'image ne doit pas dépasser 3 Mo.");
       return;
     }
-
     const lecteur = new FileReader();
-
     lecteur.onload = () => {
       const resultat = lecteur.result;
-
-      if (typeof resultat === "string") {
-        modifierChamp("image", resultat);
-      }
+      if (typeof resultat === "string") modifierChamp("image", resultat);
     };
-
-    lecteur.onerror = () => {
-      setErreur("Impossible de lire l’image sélectionnée.");
-    };
-
+    lecteur.onerror = () => setErreur("Impossible de lire l'image sélectionnée.");
     lecteur.readAsDataURL(fichier);
   }
 
@@ -188,7 +177,8 @@ export default function AdminCommuniquesPage() {
     setErreur("");
   }
 
-  function enregistrerCommunique(event: FormEvent<HTMLFormElement>) {
+  // ── Enregistrement (création ou modification) ───────────────────────
+  async function enregistrerCommunique(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErreur("");
     setMessage("");
@@ -197,78 +187,99 @@ export default function AdminCommuniquesPage() {
       setErreur("Le titre du communiqué est obligatoire.");
       return;
     }
-
     if (!formulaire.resume.trim()) {
       setErreur("Le résumé du communiqué est obligatoire.");
       return;
     }
-
     if (!formulaire.datePublication) {
       setErreur("Veuillez choisir une date de publication.");
       return;
     }
-
     if (!formulaire.reference.trim()) {
       setErreur("La référence du communiqué est obligatoire.");
       return;
     }
-
     if (!formulaire.image) {
       setErreur("Veuillez ajouter une affiche ou une image.");
       return;
     }
 
     const referenceExiste = communiques.some(
-      (communique) =>
-        communique.reference.toLowerCase() ===
+      (c) =>
+        c.reference.toLowerCase() ===
           formulaire.reference.trim().toLowerCase() &&
-        communique.id !== communiqueEnModification,
+        c.id !== communiqueEnModification,
     );
-
     if (referenceExiste) {
       setErreur("Cette référence est déjà utilisée.");
       return;
     }
 
+    setEnregistrementEnCours(true);
+
+    const corps = {
+      titre: formulaire.titre.trim(),
+      categorie: formulaire.categorie,
+      resume: formulaire.resume.trim(),
+      contenu: formulaire.contenu.trim(),
+      datePublication: formulaire.datePublication,
+      reference: formulaire.reference.trim().toUpperCase(),
+      image: formulaire.image,
+      statut: formulaire.statut,
+    };
+
     if (communiqueEnModification) {
-      setCommuniques((anciensCommuniques) =>
-        anciensCommuniques.map((communique) =>
-          communique.id === communiqueEnModification
-            ? {
-                ...communique,
-                ...formulaire,
-                titre: formulaire.titre.trim(),
-                resume: formulaire.resume.trim(),
-                contenu: formulaire.contenu.trim(),
-                reference: formulaire.reference.trim().toUpperCase(),
-              }
-            : communique,
-        ),
+      const reponse = await fetch(
+        `/api/communiques/${communiqueEnModification}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(corps),
+        },
       );
 
-      setMessage("Le communiqué a été modifié avec succès.");
-    } else {
-      const nouveauCommunique: Communique = {
-        id: crypto.randomUUID(),
-        ...formulaire,
-        titre: formulaire.titre.trim(),
-        resume: formulaire.resume.trim(),
-        contenu: formulaire.contenu.trim(),
-        reference: formulaire.reference.trim().toUpperCase(),
-        createdAt: new Date().toISOString(),
+      const json = (await reponse.json()) as {
+        succes: boolean;
+        communique?: Record<string, unknown>;
       };
 
-      setCommuniques((anciensCommuniques) => [
-        nouveauCommunique,
-        ...anciensCommuniques,
-      ]);
+      if (json.succes && json.communique) {
+        setCommuniques((anciens) =>
+          anciens.map((c) =>
+            c.id === communiqueEnModification
+              ? mapperDepuisSupabase(json.communique!)
+              : c,
+          ),
+        );
+        setMessage("Le communiqué a été modifié avec succès.");
+      } else {
+        setErreur("Erreur lors de la modification.");
+      }
+    } else {
+      const reponse = await fetch("/api/communiques", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(corps),
+      });
 
-      setMessage("Le communiqué a été enregistré avec succès.");
+      const json = (await reponse.json()) as {
+        succes: boolean;
+        communique?: Record<string, unknown>;
+      };
+
+      if (json.succes && json.communique) {
+        setCommuniques((anciens) => [
+          mapperDepuisSupabase(json.communique!),
+          ...anciens,
+        ]);
+        setMessage("Le communiqué a été enregistré avec succès.");
+      } else {
+        setErreur("Erreur lors de l'enregistrement.");
+      }
     }
 
-    setFormulaire(formulaireInitial);
-    setCommuniqueEnModification(null);
-    setFormulaireVisible(false);
+    setEnregistrementEnCours(false);
+    reinitialiserFormulaire();
   }
 
   function modifierCommunique(communique: Communique) {
@@ -282,55 +293,78 @@ export default function AdminCommuniquesPage() {
       image: communique.image,
       statut: communique.statut,
     });
-
     setCommuniqueEnModification(communique.id);
     setFormulaireVisible(true);
     setMessage("");
     setErreur("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
+  // ── Changement de statut (Brouillon ↔ Publié) + notification push ──
+  async function changerStatut(id: string) {
+    const communique = communiques.find((c) => c.id === id);
+    if (!communique) return;
+
+    const nouveauStatut: StatutCommunique =
+      communique.statut === "Publié" ? "Brouillon" : "Publié";
+
+    const reponse = await fetch(`/api/communiques/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ statut: nouveauStatut }),
     });
+
+    const json = (await reponse.json()) as { succes: boolean };
+
+    if (json.succes) {
+      setCommuniques((anciens) =>
+        anciens.map((c) =>
+          c.id === id ? { ...c, statut: nouveauStatut } : c,
+        ),
+      );
+      setMessage("Le statut du communiqué a été modifié.");
+
+      // Envoyer une notification push à tous les abonnés lors de la publication
+      if (nouveauStatut === "Publié") {
+        void fetch("/api/notifications/broadcast", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            titre: communique.titre,
+            body: communique.resume || "Un nouveau communiqué a été publié.",
+            url: "/",
+            tag: `communique-${id}`,
+          }),
+        });
+      }
+    } else {
+      setErreur("Impossible de changer le statut.");
+    }
   }
 
-  function changerStatut(id: string) {
-    setCommuniques((anciensCommuniques) =>
-      anciensCommuniques.map((communique) =>
-        communique.id === id
-          ? {
-              ...communique,
-              statut:
-                communique.statut === "Publié" ? "Brouillon" : "Publié",
-            }
-          : communique,
-      ),
-    );
-
-    setMessage("Le statut du communiqué a été modifié.");
-  }
-
-  function supprimerCommunique(id: string) {
+  // ── Suppression ─────────────────────────────────────────────────────
+  async function supprimerCommunique(id: string) {
     const confirmation = window.confirm(
       "Voulez-vous vraiment supprimer ce communiqué ?",
     );
+    if (!confirmation) return;
 
-    if (!confirmation) {
-      return;
+    const reponse = await fetch(`/api/communiques/${id}`, {
+      method: "DELETE",
+    });
+
+    const json = (await reponse.json()) as { succes: boolean };
+
+    if (json.succes) {
+      setCommuniques((anciens) => anciens.filter((c) => c.id !== id));
+      setMessage("Le communiqué a été supprimé.");
+    } else {
+      setErreur("Impossible de supprimer le communiqué.");
     }
-
-    setCommuniques((anciensCommuniques) =>
-      anciensCommuniques.filter((communique) => communique.id !== id),
-    );
-
-    setMessage("Le communiqué a été supprimé.");
   }
 
   function formaterDate(date: string) {
-    if (!date) {
-      return "Date non définie";
-    }
-
+    if (!date) return "Date non définie";
     return new Intl.DateTimeFormat("fr-FR", {
       day: "2-digit",
       month: "long",
@@ -338,6 +372,7 @@ export default function AdminCommuniquesPage() {
     }).format(new Date(`${date}T00:00:00`));
   }
 
+  // ── Rendu ────────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-neutral-100 text-neutral-950">
       {/* Barre supérieure */}
@@ -350,398 +385,313 @@ export default function AdminCommuniquesPage() {
             >
               PC
             </Link>
-
             <div>
-              <p className="font-black text-black">Province Connect</p>
-              <p className="text-xs font-semibold text-black/65">
-                Gestion des communiqués
+              <p className="font-black text-black">Communiqués</p>
+              <p className="text-xs font-semibold text-black/70">
+                Gestion des communiqués officiels
               </p>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
             <Link
-              href="/"
-              className="hidden rounded-xl border border-black/15 bg-white/30 px-4 py-2 text-sm font-extrabold text-black transition hover:bg-white/50 sm:inline-flex"
-            >
-              Voir le site public
-            </Link>
-
-            <Link
               href="/admin/dashboard"
-              className="rounded-xl bg-black px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-green-800"
+              className="hidden rounded-xl bg-black/10 px-4 py-2 text-sm font-extrabold text-black transition hover:bg-black hover:text-white sm:block"
             >
-              Tableau de bord
+              ← Tableau de bord
             </Link>
+            <button
+              type="button"
+              onClick={() => {
+                reinitialiserFormulaire();
+                setFormulaireVisible(true);
+              }}
+              className="rounded-xl bg-black px-4 py-2 text-sm font-extrabold text-white transition hover:bg-green-800"
+            >
+              + Nouveau
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-7 sm:px-6 lg:px-8">
-        {/* Titre */}
-        <section className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-600">
-              Administration
-            </p>
-
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-black md:text-4xl">
-              Communiqués officiels
-            </h1>
-
-            <p className="mt-3 max-w-3xl leading-7 text-neutral-600">
-              Ajoutez les affiches, annonces, décisions et informations qui
-              seront publiées sur la partie publique de Province Connect.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (formulaireVisible) {
-                reinitialiserFormulaire();
-              } else {
-                setFormulaireVisible(true);
-                setMessage("");
-                setErreur("");
-              }
-            }}
-            className="inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-orange-500 px-6 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
-          >
-            {formulaireVisible ? "Fermer le formulaire" : "+ Nouveau communiqué"}
-          </button>
-        </section>
-
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
         {/* Messages */}
         {message && (
-          <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-bold text-green-800">
-            {message}
+          <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl bg-green-50 px-5 py-4 text-sm font-bold text-green-800 shadow-sm">
+            <p>{message}</p>
+            <button
+              type="button"
+              onClick={() => setMessage("")}
+              className="shrink-0 text-lg text-green-600 hover:text-green-800"
+            >
+              ×
+            </button>
           </div>
         )}
 
         {erreur && (
-          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
-            {erreur}
+          <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl bg-red-50 px-5 py-4 text-sm font-bold text-red-800 shadow-sm">
+            <p>{erreur}</p>
+            <button
+              type="button"
+              onClick={() => setErreur("")}
+              className="shrink-0 text-lg text-red-600 hover:text-red-800"
+            >
+              ×
+            </button>
           </div>
         )}
 
         {/* Statistiques */}
-        <section className="mt-7 grid gap-4 sm:grid-cols-3">
-          <article className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-neutral-500">
-              Total des communiqués
-            </p>
-            <p className="mt-3 text-3xl font-black text-black">
-              {statistiques.total}
-            </p>
-          </article>
-
-          <article className="rounded-2xl border border-green-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-neutral-500">
-              Communiqués publiés
-            </p>
-            <p className="mt-3 text-3xl font-black text-green-700">
-              {statistiques.publies}
-            </p>
-          </article>
-
-          <article className="rounded-2xl border border-orange-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-neutral-500">
-              Communiqués en brouillon
-            </p>
-            <p className="mt-3 text-3xl font-black text-orange-600">
-              {statistiques.brouillons}
-            </p>
-          </article>
-        </section>
-
-        {/* Formulaire */}
-        {formulaireVisible && (
-          <section className="mt-7 overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-sm">
-            <div className="border-b border-black/10 bg-black px-6 py-5 text-white">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-400">
-                Publication
+        <div className="mb-8 grid grid-cols-3 gap-4">
+          {[
+            { label: "Total", valeur: statistiques.total, couleur: "bg-black" },
+            { label: "Publiés", valeur: statistiques.publies, couleur: "bg-green-700" },
+            { label: "Brouillons", valeur: statistiques.brouillons, couleur: "bg-orange-500" },
+          ].map((stat) => (
+            <article
+              key={stat.label}
+              className="rounded-2xl bg-white p-5 shadow-sm"
+            >
+              <p className="text-sm font-bold text-neutral-500">{stat.label}</p>
+              <p className={`mt-2 text-3xl font-black text-neutral-950`}>
+                {stat.valeur}
               </p>
+            </article>
+          ))}
+        </div>
 
-              <h2 className="mt-2 text-2xl font-black">
+        {/* Formulaire de création / modification */}
+        {formulaireVisible && (
+          <section className="mb-8 rounded-2xl border border-black/10 bg-white p-6 shadow-sm md:p-8">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-black">
                 {communiqueEnModification
                   ? "Modifier le communiqué"
-                  : "Ajouter un nouveau communiqué"}
+                  : "Nouveau communiqué"}
               </h2>
+              <button
+                type="button"
+                onClick={reinitialiserFormulaire}
+                className="text-2xl text-neutral-400 hover:text-black"
+                aria-label="Fermer"
+              >
+                ×
+              </button>
             </div>
 
-            <form
-              onSubmit={enregistrerCommunique}
-              className="grid gap-7 p-6 lg:grid-cols-[1fr_420px]"
-            >
-              <div className="space-y-5">
-                <div className="grid gap-5 md:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor="titre"
-                      className="mb-2 block text-sm font-extrabold text-black"
-                    >
-                      Titre du communiqué
-                    </label>
-
-                    <input
-                      id="titre"
-                      type="text"
-                      value={formulaire.titre}
-                      onChange={(event) =>
-                        modifierChamp("titre", event.target.value)
-                      }
-                      placeholder="Exemple : Campagne provinciale 2026"
-                      className="min-h-13 w-full rounded-xl border border-black/15 bg-neutral-50 px-4 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="categorie"
-                      className="mb-2 block text-sm font-extrabold text-black"
-                    >
-                      Catégorie
-                    </label>
-
-                    <select
-                      id="categorie"
-                      value={formulaire.categorie}
-                      onChange={(event) =>
-                        modifierChamp("categorie", event.target.value)
-                      }
-                      className="min-h-13 w-full rounded-xl border border-black/15 bg-neutral-50 px-4 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
-                    >
-                      {categories.map((categorie) => (
-                        <option key={categorie} value={categorie}>
-                          {categorie}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="resume"
-                    className="mb-2 block text-sm font-extrabold text-black"
-                  >
-                    Résumé
+            <form onSubmit={(e) => void enregistrerCommunique(e)} className="space-y-5">
+              <div className="grid gap-5 md:grid-cols-2">
+                {/* Titre */}
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-extrabold">
+                    Titre *
                   </label>
-
-                  <textarea
-                    id="resume"
-                    value={formulaire.resume}
-                    onChange={(event) =>
-                      modifierChamp("resume", event.target.value)
-                    }
-                    placeholder="Résumé qui sera visible sur la page d’accueil..."
-                    maxLength={250}
-                    className="min-h-28 w-full resize-y rounded-xl border border-black/15 bg-neutral-50 px-4 py-3 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
-                  />
-
-                  <p className="mt-1 text-right text-xs text-neutral-400">
-                    {formulaire.resume.length}/250
-                  </p>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="contenu"
-                    className="mb-2 block text-sm font-extrabold text-black"
-                  >
-                    Contenu détaillé
-                  </label>
-
-                  <textarea
-                    id="contenu"
-                    value={formulaire.contenu}
-                    onChange={(event) =>
-                      modifierChamp("contenu", event.target.value)
-                    }
-                    placeholder="Écrivez ici le contenu complet du communiqué..."
-                    className="min-h-40 w-full resize-y rounded-xl border border-black/15 bg-neutral-50 px-4 py-3 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
+                  <input
+                    type="text"
+                    value={formulaire.titre}
+                    onChange={(e) => modifierChamp("titre", e.target.value)}
+                    className="w-full rounded-xl border border-black/20 px-4 py-3 text-sm font-semibold focus:border-orange-500 focus:outline-none"
+                    placeholder="Titre du communiqué"
+                    required
                   />
                 </div>
 
-                <div className="grid gap-5 md:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor="date-publication"
-                      className="mb-2 block text-sm font-extrabold text-black"
-                    >
-                      Date de publication
-                    </label>
-
-                    <input
-                      id="date-publication"
-                      type="date"
-                      value={formulaire.datePublication}
-                      onChange={(event) =>
-                        modifierChamp("datePublication", event.target.value)
-                      }
-                      className="min-h-13 w-full rounded-xl border border-black/15 bg-neutral-50 px-4 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="statut"
-                      className="mb-2 block text-sm font-extrabold text-black"
-                    >
-                      Statut
-                    </label>
-
-                    <select
-                      id="statut"
-                      value={formulaire.statut}
-                      onChange={(event) =>
-                        modifierChamp(
-                          "statut",
-                          event.target.value as StatutCommunique,
-                        )
-                      }
-                      className="min-h-13 w-full rounded-xl border border-black/15 bg-neutral-50 px-4 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
-                    >
-                      <option value="Brouillon">Brouillon</option>
-                      <option value="Publié">Publié</option>
-                    </select>
-                  </div>
+                {/* Catégorie */}
+                <div>
+                  <label className="mb-2 block text-sm font-extrabold">
+                    Catégorie *
+                  </label>
+                  <select
+                    value={formulaire.categorie}
+                    onChange={(e) => modifierChamp("categorie", e.target.value)}
+                    className="w-full rounded-xl border border-black/20 px-4 py-3 text-sm font-semibold focus:border-orange-500 focus:outline-none"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
+                {/* Statut */}
                 <div>
-                  <label
-                    htmlFor="reference"
-                    className="mb-2 block text-sm font-extrabold text-black"
-                  >
-                    Numéro de référence
+                  <label className="mb-2 block text-sm font-extrabold">
+                    Statut
                   </label>
+                  <select
+                    value={formulaire.statut}
+                    onChange={(e) =>
+                      modifierChamp(
+                        "statut",
+                        e.target.value as StatutCommunique,
+                      )
+                    }
+                    className="w-full rounded-xl border border-black/20 px-4 py-3 text-sm font-semibold focus:border-orange-500 focus:outline-none"
+                  >
+                    <option value="Brouillon">Brouillon</option>
+                    <option value="Publié">Publié</option>
+                  </select>
+                </div>
 
-                  <div className="flex flex-col gap-3 sm:flex-row">
+                {/* Date de publication */}
+                <div>
+                  <label className="mb-2 block text-sm font-extrabold">
+                    Date de publication *
+                  </label>
+                  <input
+                    type="date"
+                    value={formulaire.datePublication}
+                    onChange={(e) =>
+                      modifierChamp("datePublication", e.target.value)
+                    }
+                    className="w-full rounded-xl border border-black/20 px-4 py-3 text-sm font-semibold focus:border-orange-500 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                {/* Référence */}
+                <div>
+                  <label className="mb-2 block text-sm font-extrabold">
+                    Référence *
+                  </label>
+                  <div className="flex gap-2">
                     <input
-                      id="reference"
                       type="text"
                       value={formulaire.reference}
-                      onChange={(event) =>
-                        modifierChamp("reference", event.target.value)
+                      onChange={(e) =>
+                        modifierChamp(
+                          "reference",
+                          e.target.value.toUpperCase(),
+                        )
                       }
+                      className="flex-1 rounded-xl border border-black/20 px-4 py-3 text-sm font-semibold focus:border-orange-500 focus:outline-none"
                       placeholder="PC-COM-2026-0001"
-                      className="min-h-13 flex-1 rounded-xl border border-black/15 bg-neutral-50 px-4 uppercase outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
+                      required
                     />
-
                     <button
                       type="button"
                       onClick={genererReference}
-                      className="min-h-13 rounded-xl bg-black px-5 text-sm font-extrabold text-white transition hover:bg-green-800"
+                      className="rounded-xl bg-neutral-100 px-4 py-3 text-sm font-extrabold hover:bg-black hover:text-white"
                     >
                       Générer
                     </button>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 border-t border-black/10 pt-6 sm:flex-row">
-                  <button
-                    type="submit"
-                    className="min-h-13 rounded-xl bg-orange-500 px-7 font-extrabold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
-                  >
-                    {communiqueEnModification
-                      ? "Enregistrer les modifications"
-                      : "Enregistrer le communiqué"}
-                  </button>
+                {/* Résumé */}
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-extrabold">
+                    Résumé *
+                  </label>
+                  <textarea
+                    value={formulaire.resume}
+                    onChange={(e) => modifierChamp("resume", e.target.value)}
+                    rows={3}
+                    className="w-full rounded-xl border border-black/20 px-4 py-3 text-sm font-semibold focus:border-orange-500 focus:outline-none"
+                    placeholder="Résumé visible sur la page d'accueil"
+                    required
+                  />
+                </div>
 
-                  <button
-                    type="button"
-                    onClick={reinitialiserFormulaire}
-                    className="min-h-13 rounded-xl border border-black/15 bg-white px-7 font-extrabold text-black transition hover:bg-neutral-100"
-                  >
-                    Annuler
-                  </button>
+                {/* Contenu */}
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-extrabold">
+                    Contenu complet
+                  </label>
+                  <textarea
+                    value={formulaire.contenu}
+                    onChange={(e) => modifierChamp("contenu", e.target.value)}
+                    rows={5}
+                    className="w-full rounded-xl border border-black/20 px-4 py-3 text-sm font-semibold focus:border-orange-500 focus:outline-none"
+                    placeholder="Contenu intégral du communiqué (optionnel)"
+                  />
+                </div>
+
+                {/* Image */}
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-extrabold">
+                    Affiche / Image *
+                  </label>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <input
+                      type="url"
+                      value={
+                        formulaire.image.startsWith("data:")
+                          ? ""
+                          : formulaire.image
+                      }
+                      onChange={(e) => modifierChamp("image", e.target.value)}
+                      className="flex-1 rounded-xl border border-black/20 px-4 py-3 text-sm font-semibold focus:border-orange-500 focus:outline-none"
+                      placeholder="URL de l'image (https://...)"
+                    />
+                    <span className="flex items-center text-xs font-bold text-neutral-400">
+                      ou
+                    </span>
+                    <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-black/20 px-4 py-3 text-sm font-bold text-neutral-600 hover:border-orange-500 hover:text-orange-600">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={importerImage}
+                        className="hidden"
+                      />
+                      Importer un fichier
+                    </label>
+                  </div>
+                  {formulaire.image && (
+                    <img
+                      src={formulaire.image}
+                      alt="Aperçu"
+                      className="mt-3 h-32 w-full rounded-xl object-cover"
+                    />
+                  )}
                 </div>
               </div>
 
-              {/* Image */}
-              <aside>
-                <label className="mb-2 block text-sm font-extrabold text-black">
-                  Affiche du communiqué
-                </label>
+              {erreur && (
+                <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                  {erreur}
+                </p>
+              )}
 
-                <label
-                  htmlFor="image-communique"
-                  className="flex min-h-[260px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-black/15 bg-neutral-50 text-center transition hover:border-orange-400 hover:bg-orange-50"
+              <div className="flex flex-wrap gap-3 border-t border-black/10 pt-5">
+                <button
+                  type="submit"
+                  disabled={enregistrementEnCours}
+                  className="rounded-xl bg-black px-6 py-3 text-sm font-extrabold text-white transition hover:bg-green-800 disabled:opacity-60"
                 >
-                  {formulaire.image ? (
-                    <img
-                      src={formulaire.image}
-                      alt="Aperçu de l’affiche"
-                      className="h-full min-h-[260px] w-full object-cover"
-                    />
-                  ) : (
-                    <div className="p-7">
-                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500 font-black text-white">
-                        IMG
-                      </div>
-
-                      <p className="mt-5 font-extrabold text-black">
-                        Cliquez pour choisir une affiche
-                      </p>
-
-                      <p className="mt-2 text-sm leading-6 text-neutral-500">
-                        Formats recommandés : JPG, PNG ou WEBP.
-                        <br />
-                        Taille maximale : 3 Mo.
-                      </p>
-                    </div>
-                  )}
-                </label>
-
-                <input
-                  id="image-communique"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={importerImage}
-                  className="hidden"
-                />
-
-                {formulaire.image && (
-                  <button
-                    type="button"
-                    onClick={() => modifierChamp("image", "")}
-                    className="mt-3 w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-extrabold text-red-700 transition hover:bg-red-100"
-                  >
-                    Retirer l’image
-                  </button>
-                )}
-
-                <div className="mt-5 rounded-2xl bg-neutral-100 p-4">
-                  <p className="text-sm font-extrabold text-black">
-                    Conseil d’affichage
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-neutral-600">
-                    Utilisez une affiche horizontale avec un texte lisible.
-                    L’image sera affichée dans le carrousel du site public.
-                  </p>
-                </div>
-              </aside>
+                  {enregistrementEnCours
+                    ? "Enregistrement…"
+                    : communiqueEnModification
+                      ? "Enregistrer les modifications"
+                      : "Créer le communiqué"}
+                </button>
+                <button
+                  type="button"
+                  onClick={reinitialiserFormulaire}
+                  className="rounded-xl border border-black/20 px-6 py-3 text-sm font-extrabold transition hover:bg-neutral-100"
+                >
+                  Annuler
+                </button>
+              </div>
             </form>
           </section>
         )}
 
-        {/* Recherche et filtre */}
-        <section className="mt-7 rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <div className="grid gap-4 md:grid-cols-[1fr_220px]">
+        {/* Filtres */}
+        <section className="mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <input
-              type="search"
+              type="text"
               value={recherche}
-              onChange={(event) => setRecherche(event.target.value)}
-              placeholder="Rechercher par titre, catégorie ou référence..."
-              className="min-h-12 rounded-xl border border-black/15 bg-neutral-50 px-4 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
+              onChange={(e) => setRecherche(e.target.value)}
+              placeholder="Rechercher par titre, référence…"
+              className="flex-1 rounded-xl border border-black/20 bg-white px-4 py-3 text-sm font-semibold focus:border-orange-500 focus:outline-none"
             />
-
             <select
               value={filtreStatut}
-              onChange={(event) => setFiltreStatut(event.target.value)}
-              className="min-h-12 rounded-xl border border-black/15 bg-neutral-50 px-4 font-bold outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
+              onChange={(e) => setFiltreStatut(e.target.value)}
+              className="rounded-xl border border-black/20 bg-white px-4 py-3 text-sm font-semibold focus:border-orange-500 focus:outline-none"
             >
               <option value="Tous">Tous les statuts</option>
               <option value="Publié">Publiés</option>
@@ -751,98 +701,96 @@ export default function AdminCommuniquesPage() {
         </section>
 
         {/* Liste */}
-        <section className="mt-7">
-          {communiquesFiltres.length === 0 ? (
-            <div className="rounded-[28px] border border-dashed border-black/15 bg-white px-6 py-16 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-neutral-100 font-black text-neutral-500">
-                COM
+        <section>
+          {chargement ? (
+            <div className="flex items-center justify-center rounded-2xl bg-white py-20 shadow-sm">
+              <div className="text-center">
+                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
+                <p className="mt-4 text-sm font-bold text-neutral-500">
+                  Chargement des communiqués…
+                </p>
               </div>
-
-              <h2 className="mt-5 text-xl font-black text-black">
+            </div>
+          ) : communiquesFiltres.length === 0 ? (
+            <div className="rounded-2xl bg-white py-16 text-center shadow-sm">
+              <p className="text-2xl font-black text-neutral-300">
                 Aucun communiqué
-              </h2>
-
-              <p className="mx-auto mt-3 max-w-lg leading-7 text-neutral-500">
-                Ajoutez votre premier communiqué pour commencer à publier des
-                affiches sur le site public.
+              </p>
+              <p className="mt-2 text-sm font-semibold text-neutral-400">
+                {recherche || filtreStatut !== "Tous"
+                  ? "Aucun résultat pour cette recherche."
+                  : "Créez votre premier communiqué en cliquant sur « + Nouveau »."}
               </p>
             </div>
           ) : (
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {communiquesFiltres.map((communique) => (
                 <article
                   key={communique.id}
-                  className="overflow-hidden rounded-[26px] border border-black/10 bg-white shadow-sm"
+                  className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm"
                 >
-                  <div className="grid sm:grid-cols-[190px_1fr]">
-                    <div className="min-h-[220px] bg-neutral-200">
+                  {communique.image && (
+                    <div className="relative h-44 overflow-hidden">
                       <img
                         src={communique.image}
                         alt={communique.titre}
-                        className="h-full min-h-[220px] w-full object-cover"
+                        className="h-full w-full object-cover"
                       />
+                      <span
+                        className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-black ${
+                          communique.statut === "Publié"
+                            ? "bg-green-600 text-white"
+                            : "bg-neutral-800 text-white"
+                        }`}
+                      >
+                        {communique.statut}
+                      </span>
                     </div>
+                  )}
 
-                    <div className="flex min-w-0 flex-col p-5">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <span
-                          className={`rounded-full px-3 py-1.5 text-xs font-black ${
-                            communique.statut === "Publié"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-orange-100 text-orange-800"
-                          }`}
-                        >
-                          {communique.statut}
-                        </span>
+                  <div className="flex flex-1 flex-col p-5">
+                    <p className="text-xs font-black uppercase tracking-wider text-orange-600">
+                      {communique.categorie}
+                    </p>
+                    <h3 className="mt-2 text-base font-black leading-snug text-neutral-950">
+                      {communique.titre}
+                    </h3>
+                    <p className="mt-1 text-xs font-semibold text-neutral-500">
+                      {formaterDate(communique.datePublication)}
+                    </p>
+                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-neutral-600">
+                      {communique.resume}
+                    </p>
+                    <p className="mt-4 text-xs font-bold uppercase tracking-wider text-neutral-400">
+                      Réf. {communique.reference}
+                    </p>
 
-                        <span className="text-xs font-bold text-neutral-400">
-                          {formaterDate(communique.datePublication)}
-                        </span>
-                      </div>
+                    <div className="mt-auto flex flex-wrap gap-2 pt-5">
+                      <button
+                        type="button"
+                        onClick={() => modifierCommunique(communique)}
+                        className="rounded-xl bg-black px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-green-800"
+                      >
+                        Modifier
+                      </button>
 
-                      <p className="mt-4 text-xs font-black uppercase tracking-wider text-orange-600">
-                        {communique.categorie}
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void changerStatut(communique.id)}
+                        className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-extrabold text-orange-700 transition hover:bg-orange-100"
+                      >
+                        {communique.statut === "Publié"
+                          ? "Mettre en brouillon"
+                          : "Publier"}
+                      </button>
 
-                      <h3 className="mt-2 text-xl font-black leading-tight text-black">
-                        {communique.titre}
-                      </h3>
-
-                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-neutral-600">
-                        {communique.resume}
-                      </p>
-
-                      <p className="mt-4 text-xs font-bold uppercase tracking-wider text-neutral-400">
-                        Réf. {communique.reference}
-                      </p>
-
-                      <div className="mt-auto flex flex-wrap gap-2 pt-5">
-                        <button
-                          type="button"
-                          onClick={() => modifierCommunique(communique)}
-                          className="rounded-xl bg-black px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-green-800"
-                        >
-                          Modifier
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => changerStatut(communique.id)}
-                          className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-extrabold text-orange-700 transition hover:bg-orange-100"
-                        >
-                          {communique.statut === "Publié"
-                            ? "Mettre en brouillon"
-                            : "Publier"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => supprimerCommunique(communique.id)}
-                          className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-extrabold text-red-700 transition hover:bg-red-100"
-                        >
-                          Supprimer
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void supprimerCommunique(communique.id)}
+                        className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-extrabold text-red-700 transition hover:bg-red-100"
+                      >
+                        Supprimer
+                      </button>
                     </div>
                   </div>
                 </article>
@@ -854,6 +802,3 @@ export default function AdminCommuniquesPage() {
     </main>
   );
 }
-
-
-
