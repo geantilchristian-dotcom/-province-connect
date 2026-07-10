@@ -40,48 +40,6 @@ type TypeCarte = {
 
 // CLE_STOCKAGE supprimé — données désormais dans Supabase
 
-const communiquesDemonstration: CommuniquePublic[] = [
-  {
-    id: "demo-1",
-    categorie: "Communiqué officiel",
-    titre: "Campagne provinciale d’enregistrement 2026",
-    description:
-      "Les commerçants, artistes, transporteurs et responsables d’activités sont invités à procéder à leur enregistrement officiel.",
-    contenu:
-      "Ce communiqué présente la campagne provinciale d’enregistrement des citoyens, professionnels et activités.",
-    date: "10 juillet 2026",
-    reference: "PC-COM-2026-001",
-    image:
-      "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1600&q=85",
-  },
-  {
-    id: "demo-2",
-    categorie: "Avis public",
-    titre: "Vérification numérique des documents provinciaux",
-    description:
-      "Les cartes, permis, autorisations et reçus provinciaux peuvent être vérifiés grâce à leur numéro unique.",
-    contenu:
-      "Le service public de vérification permet de contrôler rapidement l’authenticité d’un document provincial.",
-    date: "8 juillet 2026",
-    reference: "PC-AVIS-2026-014",
-    image:
-      "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1600&q=85",
-  },
-  {
-    id: "demo-3",
-    categorie: "Information importante",
-    titre: "Protégeons la province contre les faux documents",
-    description:
-      "Avant d’accepter un document présenté comme officiel, vérifiez son numéro ou son QR code sécurisé.",
-    contenu:
-      "Province Connect contribue à réduire la circulation des faux documents grâce à un système de vérification numérique.",
-    date: "5 juillet 2026",
-    reference: "PC-INFO-2026-021",
-    image:
-      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=85",
-  },
-];
-
 const typesCartes: TypeCarte[] = [
   {
     code: "PER",
@@ -189,9 +147,7 @@ export default function Home() {
   const [carteSelectionnee, setCarteSelectionnee] =
     useState<TypeCarte | null>(null);
 
-  const [communiques, setCommuniques] = useState<CommuniquePublic[]>(
-    communiquesDemonstration,
-  );
+  const [communiques, setCommuniques] = useState<CommuniquePublic[]>([]);
 
   const [communiqueActif, setCommuniqueActif] = useState(0);
   const [carouselEnPause, setCarouselEnPause] = useState(false);
@@ -228,7 +184,7 @@ export default function Home() {
         setCommuniques(communiquesFormates);
         setCommuniqueActif(0);
       } else {
-        setCommuniques(communiquesDemonstration);
+        setCommuniques([]);
       }
     }
 
@@ -453,6 +409,16 @@ export default function Home() {
               )}
             </div>
 
+            {communiques.length === 0 ? (
+              <div className="flex items-center justify-center rounded-[30px] border border-white/10 bg-black/40 py-14 text-center">
+                <div>
+                  <p className="text-3xl">📋</p>
+                  <p className="mt-3 text-sm font-bold text-white/50">
+                    Aucun communiqué publié pour le moment.
+                  </p>
+                </div>
+              </div>
+            ) : (
             <div className="overflow-hidden rounded-[30px] border border-white/10 bg-black shadow-2xl shadow-black/40">
               <div
                 className="flex transition-transform duration-700 ease-in-out"
@@ -463,7 +429,7 @@ export default function Home() {
                 {communiques.map((communique) => (
                   <article
                     key={communique.id}
-                    className="relative min-h-[430px] min-w-full overflow-hidden"
+                    className="relative min-h-[240px] min-w-full overflow-hidden sm:min-h-[280px]"
                   >
                     <img
                       src={communique.image}
@@ -474,7 +440,7 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/75 to-black/20" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
 
-                    <div className="relative flex min-h-[430px] items-end p-6 sm:p-9 md:p-12 lg:items-center">
+                    <div className="relative flex min-h-[240px] items-end p-5 sm:min-h-[280px] sm:p-7 lg:items-center">
                       <div className="max-w-3xl">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="rounded-full bg-orange-500 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">
@@ -519,6 +485,7 @@ export default function Home() {
                 ))}
               </div>
             </div>
+            )}
 
             {communiques.length > 1 && (
               <div className="mt-5 flex items-center justify-between sm:justify-center">
