@@ -99,7 +99,17 @@ export default function AdminCommuniquesPage() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        setErreur("Impossible de charger les communiqués.");
+        // Si la table n'existe pas encore, afficher une liste vide sans bloquer
+        if (
+          error.code === "42P01" ||
+          error.message?.includes("does not exist")
+        ) {
+          setCommuniques([]);
+        } else {
+          setErreur(
+            "Connexion Supabase impossible. Vérifiez que la migration SQL a été exécutée et que les variables d'environnement sont correctes.",
+          );
+        }
       } else {
         setCommuniques(
           (data as Record<string, unknown>[]).map(mapperDepuisSupabase),

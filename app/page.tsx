@@ -371,7 +371,7 @@ export default function Home() {
           {/* Carrousel des communiqués */}
           <div
             id="communiques"
-            className="mt-14 scroll-mt-24"
+            className="-mx-4 mt-14 scroll-mt-24 sm:mx-0"
             onMouseEnter={() => setCarouselEnPause(true)}
             onMouseLeave={() => setCarouselEnPause(false)}
           >
@@ -410,7 +410,7 @@ export default function Home() {
             </div>
 
             {communiques.length === 0 ? (
-              <div className="flex items-center justify-center rounded-[30px] border border-white/10 bg-black/40 py-14 text-center">
+              <div className="flex items-center justify-center rounded-none border-y border-white/10 bg-black/40 py-14 text-center sm:rounded-[30px] sm:border">
                 <div>
                   <p className="text-3xl">📋</p>
                   <p className="mt-3 text-sm font-bold text-white/50">
@@ -419,7 +419,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-            <div className="overflow-hidden rounded-[30px] border border-white/10 bg-black shadow-2xl shadow-black/40">
+            <div className="overflow-hidden rounded-none border-y border-white/10 bg-black shadow-2xl shadow-black/40 sm:rounded-[30px] sm:border">
               <div
                 className="flex transition-transform duration-700 ease-in-out"
                 style={{
