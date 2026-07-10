@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../lib/supabase/admin";
-import { createClient } from "../../../lib/supabase/server";
+import { verifierRoleAdmin } from "../../../lib/supabase/verifier-admin";
 
 function reponseErreur(message: string, statut: number) {
   return NextResponse.json({ succes: false, message }, { status: statut });
@@ -28,17 +28,11 @@ export async function GET() {
 
 /*
  * POST /api/communiques
- * Création d'un communiqué — réservé aux utilisateurs authentifiés.
+ * Création d'un communiqué — réservé aux administrateurs.
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return reponseErreur("Vous devez être connecté.", 401);
-  }
+  const { erreur } = await verifierRoleAdmin();
+  if (erreur) return erreur;
 
   let corps: Record<string, unknown>;
 

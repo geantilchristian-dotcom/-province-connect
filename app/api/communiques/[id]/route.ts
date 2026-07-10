@@ -1,32 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
-import { createClient } from "../../../../lib/supabase/server";
+import { verifierRoleAdmin } from "../../../../lib/supabase/verifier-admin";
 
 function reponseErreur(message: string, statut: number) {
   return NextResponse.json({ succes: false, message }, { status: statut });
 }
 
-async function verifierAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
-}
-
 /*
  * PATCH /api/communiques/[id]
- * Mise à jour d'un communiqué (statut, contenu, etc.)
+ * Mise à jour d'un communiqué — réservé aux administrateurs.
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = await verifierAdmin();
-
-  if (!user) {
-    return reponseErreur("Vous devez être connecté.", 401);
-  }
+  const { erreur } = await verifierRoleAdmin();
+  if (erreur) return erreur;
 
   const { id } = await params;
 
@@ -68,17 +57,14 @@ export async function PATCH(
 
 /*
  * DELETE /api/communiques/[id]
- * Suppression d'un communiqué.
+ * Suppression d'un communiqué — réservé aux administrateurs.
  */
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = await verifierAdmin();
-
-  if (!user) {
-    return reponseErreur("Vous devez être connecté.", 401);
-  }
+  const { erreur } = await verifierRoleAdmin();
+  if (erreur) return erreur;
 
   const { id } = await params;
 

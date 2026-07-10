@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createAdminClient } from "../../../../lib/supabase/admin";
-import { createClient } from "../../../../lib/supabase/server";
+import { verifierRoleAdmin } from "../../../../lib/supabase/verifier-admin";
 
 function reponseErreur(message: string, statut: number) {
   return NextResponse.json({ succes: false, message }, { status: statut });
@@ -16,17 +16,11 @@ type AbonnementPush = {
  * POST /api/notifications/broadcast
  *
  * Envoie une notification push à tous les abonnés (publics + employés).
- * Réservé aux utilisateurs authentifiés (admin).
+ * Réservé aux administrateurs.
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return reponseErreur("Vous devez être connecté.", 401);
-  }
+  const { erreur } = await verifierRoleAdmin();
+  if (erreur) return erreur;
 
   const clePublique = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const clePrivee = process.env.VAPID_PRIVATE_KEY;
