@@ -31,7 +31,7 @@ type CommuniquePublic = {
 
 type Service = {
   numero: string;
-  icone: string;
+  icone: "document" | "receipt" | "id" | "download" | "announcement" | "chart";
   titre: string;
   description: string;
   lien: string;
@@ -83,7 +83,7 @@ const communiquesDemonstration: CommuniquePublic[] = [
 const services: Service[] = [
   {
     numero: "01",
-    icone: "▤",
+    icone: "document",
     titre: "Vérifier un document",
     description:
       "Authentifiez une carte, un permis ou une autorisation provinciale.",
@@ -92,7 +92,7 @@ const services: Service[] = [
   },
   {
     numero: "02",
-    icone: "✓",
+    icone: "receipt",
     titre: "Vérifier un reçu",
     description:
       "Contrôlez rapidement la validité d’un reçu émis par la province.",
@@ -101,7 +101,7 @@ const services: Service[] = [
   },
   {
     numero: "03",
-    icone: "ID",
+    icone: "id",
     titre: "Services aux citoyens",
     description:
       "Accédez aux informations et démarches disponibles pour les citoyens.",
@@ -110,7 +110,7 @@ const services: Service[] = [
   },
   {
     numero: "04",
-    icone: "↓",
+    icone: "download",
     titre: "Formulaires et demandes",
     description:
       "Consultez les formulaires et les procédures administratives.",
@@ -119,7 +119,7 @@ const services: Service[] = [
   },
   {
     numero: "05",
-    icone: "!",
+    icone: "announcement",
     titre: "Annonces publiques",
     description:
       "Retrouvez les avis et communiqués officiels publiés par la province.",
@@ -128,7 +128,7 @@ const services: Service[] = [
   },
   {
     numero: "06",
-    icone: "▥",
+    icone: "chart",
     titre: "Données et rapports",
     description:
       "Consultez les informations publiques et rapports provinciaux.",
@@ -147,10 +147,122 @@ function formaterDatePublique(date: string) {
   }).format(new Date(`${date}T00:00:00`));
 }
 
+
+function Icone({
+  nom,
+  className = "h-5 w-5",
+}: {
+  nom:
+    | "document"
+    | "receipt"
+    | "id"
+    | "download"
+    | "announcement"
+    | "chart"
+    | "shield"
+    | "lock"
+    | "arrow-up";
+  className?: string;
+}) {
+  const proprietes = {
+    className,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  if (nom === "document") {
+    return (
+      <svg {...proprietes}>
+        <path d="M6 2.75h8l4 4V21.25H6z" />
+        <path d="M14 2.75v4h4" />
+        <path d="M9 12h6M9 16h6" />
+      </svg>
+    );
+  }
+
+  if (nom === "receipt") {
+    return (
+      <svg {...proprietes}>
+        <path d="M6 3.5h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3z" />
+        <path d="M9 8h6M9 12h4" />
+      </svg>
+    );
+  }
+
+  if (nom === "id") {
+    return (
+      <svg {...proprietes}>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <circle cx="8" cy="11" r="2" />
+        <path d="M5.5 16c.8-1.7 4.2-1.7 5 0M14 10h4M14 14h4" />
+      </svg>
+    );
+  }
+
+  if (nom === "download") {
+    return (
+      <svg {...proprietes}>
+        <path d="M12 3v12" />
+        <path d="m8 11 4 4 4-4" />
+        <path d="M5 20h14" />
+      </svg>
+    );
+  }
+
+  if (nom === "announcement") {
+    return (
+      <svg {...proprietes}>
+        <path d="M4 13V9h4l8-4v12l-8-4z" />
+        <path d="m8 13 1.5 6h3" />
+        <path d="M19 8.5c1 .8 1 2.2 0 3" />
+      </svg>
+    );
+  }
+
+  if (nom === "chart") {
+    return (
+      <svg {...proprietes}>
+        <path d="M4 20V10h4v10M10 20V4h4v16M16 20v-7h4v7M3 20h18" />
+      </svg>
+    );
+  }
+
+  if (nom === "shield") {
+    return (
+      <svg {...proprietes}>
+        <path d="M12 3 5.5 5.8v5.5c0 4.1 2.7 7.8 6.5 9.7 3.8-1.9 6.5-5.6 6.5-9.7V5.8z" />
+        <path d="m9 12 2 2 4-4" />
+      </svg>
+    );
+  }
+
+  if (nom === "lock") {
+    return (
+      <svg {...proprietes}>
+        <rect x="5" y="10" width="14" height="10" rx="2" />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...proprietes}>
+      <path d="m6 10 6-6 6 6" />
+      <path d="M12 4v16" />
+    </svg>
+  );
+}
+
 export default function Home() {
   const [verificationVisible, setVerificationVisible] = useState(false);
   const [servicesVisibles, setServicesVisibles] = useState(false);
   const [menuMobileVisible, setMenuMobileVisible] = useState(false);
+  const [boutonHautVisible, setBoutonHautVisible] = useState(false);
 
   const [communiquesAdmin, setCommuniquesAdmin] =
     useState<CommuniqueAdmin[]>([]);
@@ -158,8 +270,6 @@ export default function Home() {
     communiquesDemonstration,
   );
 
-  const [communiqueActif, setCommuniqueActif] = useState(0);
-  const [carouselEnPause, setCarouselEnPause] = useState(false);
   const [communiqueConsulte, setCommuniqueConsulte] =
     useState<CommuniquePublic | null>(null);
 
@@ -207,34 +317,19 @@ export default function Home() {
         ? communiquesPublies
         : communiquesDemonstration,
     );
-    setCommuniqueActif(0);
   }, [communiquesAdmin]);
 
+
   useEffect(() => {
-    if (carouselEnPause || communiques.length <= 1) return;
+    const verifierPosition = () => {
+      setBoutonHautVisible(window.scrollY > 500);
+    };
 
-    const intervalle = window.setInterval(() => {
-      setCommuniqueActif((indexActuel) =>
-        indexActuel === communiques.length - 1
-          ? 0
-          : indexActuel + 1,
-      );
-    }, 6000);
+    verifierPosition();
+    window.addEventListener("scroll", verifierPosition, { passive: true });
 
-    return () => window.clearInterval(intervalle);
-  }, [carouselEnPause, communiques.length]);
-
-  function communiquePrecedent() {
-    setCommuniqueActif((indexActuel) =>
-      indexActuel === 0 ? communiques.length - 1 : indexActuel - 1,
-    );
-  }
-
-  function communiqueSuivant() {
-    setCommuniqueActif((indexActuel) =>
-      indexActuel === communiques.length - 1 ? 0 : indexActuel + 1,
-    );
-  }
+    return () => window.removeEventListener("scroll", verifierPosition);
+  }, []);
 
   function afficherServices() {
     setServicesVisibles((etatActuel) => !etatActuel);
@@ -301,9 +396,6 @@ export default function Home() {
             >
               Accueil
             </a>
-            <a href="#professionnels" className="transition hover:text-white/75">
-              Professionnels
-            </a>
             <a href="#communiques" className="transition hover:text-white/75">
               Communiqués
             </a>
@@ -328,7 +420,7 @@ export default function Home() {
               onClick={() => setVerificationVisible(true)}
               className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[12px] font-black text-[#e74405] shadow-sm transition hover:-translate-y-0.5 sm:inline-flex"
             >
-              <span aria-hidden="true">✓</span>
+              <Icone nom="shield" className="h-4 w-4" />
               Vérifier un document
             </button>
 
@@ -348,9 +440,6 @@ export default function Home() {
             <div className="mx-auto grid max-w-[1500px] gap-2 text-sm font-bold">
               <a href="#accueil" onClick={() => setMenuMobileVisible(false)} className="rounded-lg px-3 py-2 hover:bg-white/10">
                 Accueil
-              </a>
-              <a href="#professionnels" onClick={() => setMenuMobileVisible(false)} className="rounded-lg px-3 py-2 hover:bg-white/10">
-                Professionnels
               </a>
               <a href="#communiques" onClick={() => setMenuMobileVisible(false)} className="rounded-lg px-3 py-2 hover:bg-white/10">
                 Communiqués
@@ -393,32 +482,6 @@ export default function Home() {
               Une province mieux organisée, plus transparente et connectée.
             </h1>
 
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
-              Province Connect simplifie vos démarches, renforce la transparence
-              et vous rapproche des services publics.
-            </p>
-
-            <div className="mt-7 grid max-w-2xl gap-4 sm:grid-cols-3">
-              {[
-                ["◉", "Services accessibles", "24 h/24 et 7 j/7"],
-                ["✓", "Données sécurisées", "et confidentielles"],
-                ["✓", "Informations officielles", "et à jour"],
-              ].map(([icone, titre, detail]) => (
-                <div key={titre} className="flex items-start gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-sm font-black text-[#f4510b]">
-                    {icone}
-                  </span>
-                  <div>
-                    <p className="text-xs font-black text-neutral-900 sm:text-sm">
-                      {titre}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-neutral-500 sm:text-xs">
-                      {detail}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
 
             <div className="pointer-events-none absolute bottom-5 left-0 hidden w-44 space-y-2 lg:block">
               <div className="h-1.5 rounded-r-full bg-[#f4510b]" />
@@ -459,147 +522,63 @@ export default function Home() {
                 <path d="M90 165 Q320 235 480 150" fill="none" stroke="#f4510b" strokeWidth="2" opacity=".28" />
               </svg>
 
-              <div className="absolute inset-x-0 bottom-2 text-center">
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f4510b]">
-                  Réseau provincial numérique
-                </p>
-                <p className="mt-2 text-sm text-neutral-500">
-                  Services, documents et informations connectés.
-                </p>
-              </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section
-        id="professionnels"
-        className="border-b border-neutral-200 bg-neutral-50 py-7"
-      >
-        <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 px-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-          <div>
-            <p className="text-sm font-black text-neutral-950">
-              Espace professionnels
-            </p>
-            <p className="mt-1 text-xs leading-5 text-neutral-500 sm:text-sm">
-              Commerçants, artistes, enseignants, transporteurs et structures
-              provinciales.
-            </p>
-          </div>
-
-          <a
-            href="/admin/login"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-orange-200 bg-white px-5 text-sm font-black text-[#e74405] shadow-sm transition hover:border-[#f4510b]"
-          >
-            Accéder à l’espace professionnel →
-          </a>
         </div>
       </section>
 
       <section
         id="communiques"
-        className="scroll-mt-24 border-b border-neutral-200 bg-white py-12 sm:py-16"
-        onMouseEnter={() => setCarouselEnPause(true)}
-        onMouseLeave={() => setCarouselEnPause(false)}
+        className="scroll-mt-24 border-b border-neutral-200 bg-white py-10 sm:py-14"
       >
         <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8">
-          <div className="mb-6 flex items-center justify-between gap-5">
-            <h2 className="text-xl font-black tracking-tight text-neutral-950 sm:text-2xl">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="text-lg font-black tracking-tight text-neutral-950 sm:text-xl">
               Communiqués récents
             </h2>
-
-            {communiques.length > 1 && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={communiquePrecedent}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-lg shadow-sm transition hover:border-orange-300 hover:text-[#f4510b]"
-                  aria-label="Communiqué précédent"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  onClick={communiqueSuivant}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-lg shadow-sm transition hover:border-orange-300 hover:text-[#f4510b]"
-                  aria-label="Communiqué suivant"
-                >
-                  ›
-                </button>
-              </div>
-            )}
           </div>
 
-          <div className="overflow-hidden">
-            <div
-              className="flex transition-transform duration-700 ease-in-out"
-              style={{ transform: `translateX(-${communiqueActif * 100}%)` }}
-            >
-              {communiques.map((communique) => (
-                <article
-                  key={communique.id}
-                  className="relative h-[290px] min-w-full overflow-hidden rounded-[24px] bg-neutral-900 shadow-lg sm:h-[360px]"
-                >
-                  <img
-                    src={communique.image}
-                    alt={communique.titre}
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/15" />
+          <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0">
+            {communiques.map((communique) => (
+              <article
+                key={communique.id}
+                className="relative h-[250px] min-w-[86%] snap-center overflow-hidden rounded-[20px] bg-neutral-900 shadow-md sm:min-w-[62%] lg:h-[245px] lg:min-w-0"
+              >
+                <img
+                  src={communique.image}
+                  alt={communique.titre}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/20" />
 
-                  <div className="relative flex h-full max-w-3xl flex-col justify-end p-6 sm:p-9">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="rounded-full bg-[#f4510b] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white sm:text-[10px]">
-                        {communique.categorie}
-                      </span>
-                      <span className="text-xs font-bold text-white/80">
-                        {communique.date}
-                      </span>
-                    </div>
+                <div className="relative flex h-full flex-col justify-between p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="max-w-[72%] rounded-full bg-[#f4510b] px-3 py-1.5 text-[9px] font-black uppercase tracking-wide text-white">
+                      {communique.categorie}
+                    </span>
+                    <span className="shrink-0 text-[10px] font-bold text-white/90">
+                      {communique.date}
+                    </span>
+                  </div>
 
-                    <h3 className="mt-4 line-clamp-2 text-2xl font-black leading-tight tracking-tight text-white sm:text-4xl">
+                  <div>
+                    <h3 className="line-clamp-3 text-xl font-black leading-tight tracking-tight text-white sm:text-2xl">
                       {communique.titre}
                     </h3>
 
-                    <p className="mt-3 hidden max-w-2xl text-sm leading-6 text-white/75 sm:block">
-                      {communique.description}
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap items-center gap-4">
-                      <button
-                        type="button"
-                        onClick={() => setCommuniqueConsulte(communique)}
-                        className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 text-xs font-black text-neutral-950 transition hover:bg-[#f4510b] hover:text-white sm:text-sm"
-                      >
-                        Lire le communiqué →
-                      </button>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-white/60 sm:text-xs">
-                        Réf. {communique.reference}
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCommuniqueConsulte(communique)}
+                      className="mt-4 inline-flex items-center gap-2 text-xs font-black text-white transition hover:text-orange-300"
+                    >
+                      Lire le communiqué
+                      <span aria-hidden="true">→</span>
+                    </button>
                   </div>
-                </article>
-              ))}
-            </div>
+                </div>
+              </article>
+            ))}
           </div>
-
-          {communiques.length > 1 && (
-            <div className="mt-5 flex justify-center gap-2">
-              {communiques.map((communique, index) => (
-                <button
-                  key={communique.id}
-                  type="button"
-                  onClick={() => setCommuniqueActif(index)}
-                  className={`h-2.5 rounded-full transition-all ${
-                    index === communiqueActif
-                      ? "w-9 bg-[#f4510b]"
-                      : "w-2.5 bg-neutral-300"
-                  }`}
-                  aria-label={`Afficher le communiqué ${index + 1}`}
-                />
-              ))}
-            </div>
-          )}
         </div>
       </section>
 
@@ -610,10 +589,6 @@ export default function Home() {
               <h2 className="text-xl font-black tracking-tight text-neutral-950 sm:text-2xl">
                 Services et démarches
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-                Les services restent masqués pour garder une page claire.
-                Cliquez sur le bouton pour les afficher.
-              </p>
             </div>
 
             <button
@@ -625,13 +600,12 @@ export default function Home() {
               {servicesVisibles
                 ? "Masquer les services"
                 : "Afficher les services et démarches"}
-              <span
-                className={`text-lg transition-transform ${
-                  servicesVisibles ? "rotate-180" : ""
+              <Icone
+                nom="arrow-up"
+                className={`h-4 w-4 transition-transform ${
+                  servicesVisibles ? "rotate-0" : "rotate-180"
                 }`}
-              >
-                ↓
-              </span>
+              />
             </button>
           </div>
 
@@ -644,7 +618,7 @@ export default function Home() {
                   className="group rounded-[20px] border border-neutral-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange-300 hover:shadow-lg"
                 >
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-sm font-black text-[#f4510b]">
-                    {service.icone}
+                    <Icone nom={service.icone} className="h-6 w-6" />
                   </div>
 
                   <h3 className="mt-5 text-sm font-black text-neutral-950">
@@ -694,7 +668,6 @@ export default function Home() {
             </p>
             <div className="mt-4 grid gap-2 text-xs font-semibold text-neutral-600">
               <a href="#accueil">Accueil</a>
-              <a href="#professionnels">Professionnels</a>
               <a href="#communiques">Communiqués</a>
               <button type="button" onClick={afficherServices} className="text-left">
                 Services et démarches
@@ -734,6 +707,18 @@ export default function Home() {
           <div className="ml-auto h-1 w-[72%] rounded-l-full bg-[#e30613]" />
         </div>
       </footer>
+
+
+      {boutonHautVisible && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black text-white shadow-xl transition hover:-translate-y-1 hover:bg-[#f4510b]"
+          aria-label="Remonter en haut de la page"
+        >
+          <Icone nom="arrow-up" className="h-5 w-5" />
+        </button>
+      )}
 
       {communiqueConsulte && (
         <div
@@ -813,8 +798,8 @@ export default function Home() {
                 ×
               </button>
 
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/15 text-2xl font-black">
-                ✓
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/15">
+                <Icone nom="shield" className="h-7 w-7" />
               </div>
               <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-white/85 sm:text-xs">
                 Vérification publique
@@ -853,7 +838,7 @@ export default function Home() {
                   type="submit"
                   className="mt-4 inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#f4510b] px-5 text-sm font-black text-white transition hover:bg-[#df4508]"
                 >
-                  <span>✓</span>
+                  <Icone nom="shield" className="h-5 w-5" />
                   Vérifier un document
                   <span>→</span>
                 </button>
@@ -872,15 +857,21 @@ export default function Home() {
                   href="/verification"
                   className="inline-flex min-h-12 items-center justify-between rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-800 transition hover:border-orange-300"
                 >
-                  <span>▤ Page des documents</span>
-                  <span>›</span>
+                  <span className="inline-flex items-center gap-2">
+                    <Icone nom="document" className="h-5 w-5 text-black" />
+                    Page des documents
+                  </span>
+                  <span aria-hidden="true">›</span>
                 </a>
                 <a
                   href="/verification-recu"
                   className="inline-flex min-h-12 items-center justify-between rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-800 transition hover:border-green-300"
                 >
-                  <span>▧ Page des reçus</span>
-                  <span>›</span>
+                  <span className="inline-flex items-center gap-2">
+                    <Icone nom="receipt" className="h-5 w-5 text-black" />
+                    Page des reçus
+                  </span>
+                  <span aria-hidden="true">›</span>
                 </a>
               </div>
 
@@ -890,9 +881,12 @@ export default function Home() {
                 </div>
               )}
 
-              <p className="mt-5 text-center text-[11px] leading-5 text-neutral-500">
-                🔒 Les informations privées du titulaire ne sont jamais
-                affichées publiquement.
+              <p className="mt-5 flex items-center justify-center gap-2 text-center text-[11px] leading-5 text-neutral-500">
+                <Icone nom="lock" className="h-4 w-4 shrink-0 text-black" />
+                <span>
+                  Les informations privées du titulaire ne sont jamais affichées
+                  publiquement.
+                </span>
               </p>
             </div>
           </div>
