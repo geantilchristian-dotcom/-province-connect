@@ -48,8 +48,16 @@ CREATE POLICY "communiques_ecriture_admin"
     )
   );
 
--- Temps réel
-ALTER PUBLICATION supabase_realtime ADD TABLE public.communiques;
+-- Temps réel (ignore si déjà membre)
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'communiques'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.communiques;
+  END IF;
+END $;
 
 -- ── Table abonnements push publics ───────────────────────────
 CREATE TABLE IF NOT EXISTS public.push_subscriptions_public (
