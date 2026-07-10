@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-
 import { useSupabaseCollection } from "../lib/data/useSupabaseCollection";
 
 type StatutCommunique = "Brouillon" | "Publié";
@@ -30,19 +29,19 @@ type CommuniquePublic = {
   image: string;
 };
 
-type TypeCarte = {
-  code: string;
-  nom: string;
-  categorie: string;
+type Service = {
+  numero: string;
+  icone: string;
+  titre: string;
   description: string;
+  lien: string;
+  action: string;
 };
-
-const CLE_STOCKAGE = "province-connect-communiques";
 
 const communiquesDemonstration: CommuniquePublic[] = [
   {
     id: "demo-1",
-    categorie: "Communiqué officiel",
+    categorie: "Information importante",
     titre: "Campagne provinciale d’enregistrement 2026",
     description:
       "Les commerçants, artistes, transporteurs et responsables d’activités sont invités à procéder à leur enregistrement officiel.",
@@ -55,7 +54,7 @@ const communiquesDemonstration: CommuniquePublic[] = [
   },
   {
     id: "demo-2",
-    categorie: "Avis public",
+    categorie: "Travaux publics",
     titre: "Vérification numérique des documents provinciaux",
     description:
       "Les cartes, permis, autorisations et reçus provinciaux peuvent être vérifiés grâce à leur numéro unique.",
@@ -68,7 +67,7 @@ const communiquesDemonstration: CommuniquePublic[] = [
   },
   {
     id: "demo-3",
-    categorie: "Information importante",
+    categorie: "Économie",
     titre: "Protégeons la province contre les faux documents",
     description:
       "Avant d’accepter un document présenté comme officiel, vérifiez son numéro ou son QR code sécurisé.",
@@ -81,99 +80,65 @@ const communiquesDemonstration: CommuniquePublic[] = [
   },
 ];
 
-const typesCartes: TypeCarte[] = [
-  {
-    code: "PER",
-    nom: "Permis provincial",
-    categorie: "Permis et autorisations",
-    description:
-      "Permis officiel ou autorisation délivrée par l’administration provinciale.",
-  },
-  {
-    code: "COM",
-    nom: "Carte commerçant",
-    categorie: "Commerce",
-    description:
-      "Carte professionnelle destinée aux commerçants officiellement enregistrés.",
-  },
-  {
-    code: "ART",
-    nom: "Carte artiste",
-    categorie: "Culture et arts",
-    description:
-      "Carte d’identification provinciale destinée aux artistes et créateurs.",
-  },
-  {
-    code: "ENS",
-    nom: "Carte enseignant",
-    categorie: "Éducation",
-    description:
-      "Carte professionnelle destinée aux enseignants enregistrés.",
-  },
-  {
-    code: "TRP",
-    nom: "Carte transporteur",
-    categorie: "Transport",
-    description:
-      "Carte professionnelle pour les transporteurs et conducteurs enregistrés.",
-  },
-  {
-    code: "ADM",
-    nom: "Carte agent administratif",
-    categorie: "Administration",
-    description:
-      "Badge professionnel destiné aux agents administratifs autorisés.",
-  },
-  {
-    code: "ACT",
-    nom: "Carte d’activité",
-    categorie: "Activités professionnelles",
-    description:
-      "Identification officielle d’une boutique, entreprise ou structure.",
-  },
-  {
-    code: "SOC",
-    nom: "Carte structure sociale",
-    categorie: "Secteur social",
-    description:
-      "Carte destinée aux associations et structures sociales enregistrées.",
-  },
-];
-
-const services = [
+const services: Service[] = [
   {
     numero: "01",
-    titre: "Cartes provinciales",
+    icone: "▤",
+    titre: "Vérifier un document",
     description:
-      "Création et gestion des cartes pour commerçants, artistes, enseignants, transporteurs et autres professionnels.",
-    couleur: "bg-orange-500",
+      "Authentifiez une carte, un permis ou une autorisation provinciale.",
     lien: "/verification",
-    action: "Vérifier une carte",
+    action: "Ouvrir la vérification",
   },
   {
     numero: "02",
-    titre: "Permis et autorisations",
+    icone: "✓",
+    titre: "Vérifier un reçu",
     description:
-      "Délivrance, renouvellement et vérification des permis et autorisations provinciales.",
-    couleur: "bg-green-700",
-    lien: "/verification",
-    action: "Vérifier un permis",
+      "Contrôlez rapidement la validité d’un reçu émis par la province.",
+    lien: "/verification-recu",
+    action: "Contrôler un reçu",
   },
   {
     numero: "03",
-    titre: "Paiements et reçus",
+    icone: "ID",
+    titre: "Services aux citoyens",
     description:
-      "Enregistrement sécurisé des taxes, paiements et reçus numériques vérifiables.",
-    couleur: "bg-black",
-    lien: "/verification-recu",
-    action: "Vérifier un reçu",
+      "Accédez aux informations et démarches disponibles pour les citoyens.",
+    lien: "#contact",
+    action: "Voir les informations",
+  },
+  {
+    numero: "04",
+    icone: "↓",
+    titre: "Formulaires et demandes",
+    description:
+      "Consultez les formulaires et les procédures administratives.",
+    lien: "#contact",
+    action: "Consulter les démarches",
+  },
+  {
+    numero: "05",
+    icone: "!",
+    titre: "Annonces publiques",
+    description:
+      "Retrouvez les avis et communiqués officiels publiés par la province.",
+    lien: "#communiques",
+    action: "Voir les annonces",
+  },
+  {
+    numero: "06",
+    icone: "▥",
+    titre: "Données et rapports",
+    description:
+      "Consultez les informations publiques et rapports provinciaux.",
+    lien: "#contact",
+    action: "Voir les rapports",
   },
 ];
 
 function formaterDatePublique(date: string) {
-  if (!date) {
-    return "Date non définie";
-  }
+  if (!date) return "Date non définie";
 
   return new Intl.DateTimeFormat("fr-FR", {
     day: "2-digit",
@@ -184,13 +149,11 @@ function formaterDatePublique(date: string) {
 
 export default function Home() {
   const [verificationVisible, setVerificationVisible] = useState(false);
-  const [cartesVisibles, setCartesVisibles] = useState(false);
-  const [carteSelectionnee, setCarteSelectionnee] =
-    useState<TypeCarte | null>(null);
+  const [servicesVisibles, setServicesVisibles] = useState(false);
+  const [menuMobileVisible, setMenuMobileVisible] = useState(false);
 
   const [communiquesAdmin, setCommuniquesAdmin] =
     useState<CommuniqueAdmin[]>([]);
-
   const [communiques, setCommuniques] = useState<CommuniquePublic[]>(
     communiquesDemonstration,
   );
@@ -222,7 +185,6 @@ export default function Home() {
         const datePremier = new Date(
           `${premier.datePublication}T00:00:00`,
         ).getTime();
-
         const dateDeuxieme = new Date(
           `${deuxieme.datePublication}T00:00:00`,
         ).getTime();
@@ -248,13 +210,8 @@ export default function Home() {
     setCommuniqueActif(0);
   }, [communiquesAdmin]);
 
-  /*
-   * Défilement automatique des affiches.
-   */
   useEffect(() => {
-    if (carouselEnPause || communiques.length <= 1) {
-      return;
-    }
+    if (carouselEnPause || communiques.length <= 1) return;
 
     const intervalle = window.setInterval(() => {
       setCommuniqueActif((indexActuel) =>
@@ -269,23 +226,24 @@ export default function Home() {
 
   function communiquePrecedent() {
     setCommuniqueActif((indexActuel) =>
-      indexActuel === 0
-        ? communiques.length - 1
-        : indexActuel - 1,
+      indexActuel === 0 ? communiques.length - 1 : indexActuel - 1,
     );
   }
 
   function communiqueSuivant() {
     setCommuniqueActif((indexActuel) =>
-      indexActuel === communiques.length - 1
-        ? 0
-        : indexActuel + 1,
+      indexActuel === communiques.length - 1 ? 0 : indexActuel + 1,
     );
   }
 
-  function fermerCartes() {
-    setCartesVisibles(false);
-    setCarteSelectionnee(null);
+  function afficherServices() {
+    setServicesVisibles((etatActuel) => !etatActuel);
+
+    window.setTimeout(() => {
+      document
+        .getElementById("services")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
   }
 
   function fermerVerification() {
@@ -309,10 +267,7 @@ export default function Home() {
       return;
     }
 
-    setMessageVerification("");
-
     const estUnRecu = numeroNettoye.startsWith("PC-REC-");
-
     const destination = estUnRecu
       ? `/verification-recu?numero=${encodeURIComponent(numeroNettoye)}`
       : `/verification?numero=${encodeURIComponent(numeroNettoye)}`;
@@ -321,682 +276,625 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-white font-sans text-neutral-950 antialiased selection:bg-orange-200 selection:text-black">
-      {/* Barre de navigation */}
-      <header className="sticky top-0 z-40 border-b border-orange-700/40 bg-[#f26522] shadow-[0_6px_24px_rgba(0,0,0,0.16)]">
-        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
+    <main className="min-h-screen bg-white font-sans text-neutral-950 antialiased">
+      <header className="sticky top-0 z-40 border-b border-orange-700 bg-[#f4510b] text-white shadow-sm">
+        <div className="mx-auto flex min-h-[72px] w-full max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <a href="#accueil" className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black text-xs font-black tracking-wide text-white shadow-lg sm:h-11 sm:w-11 sm:text-sm">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-black text-[#f4510b] shadow-sm">
               PC
             </div>
 
             <div className="min-w-0">
-              <h1 className="truncate text-[15px] font-black tracking-[-0.02em] text-black sm:text-lg">
+              <p className="truncate text-base font-black tracking-tight sm:text-lg">
                 Province Connect
-              </h1>
-
-              <p className="truncate text-[11px] font-semibold text-black/70 sm:text-xs">
+              </p>
+              <p className="truncate text-[10px] font-semibold text-white/80 sm:text-xs">
                 Registre Provincial Numérique
               </p>
             </div>
           </a>
 
-          <nav className="hidden items-center gap-8 text-sm font-extrabold lg:flex">
+          <nav className="hidden items-center gap-6 text-[13px] font-bold xl:flex">
             <a
               href="#accueil"
-              className="text-black transition hover:text-white"
+              className="border-b-2 border-white pb-2 transition hover:text-white/75"
             >
               Accueil
             </a>
-
-            <a
-              href="#communiques"
-              className="text-black/75 transition hover:text-white"
-            >
+            <a href="#professionnels" className="transition hover:text-white/75">
+              Professionnels
+            </a>
+            <a href="#communiques" className="transition hover:text-white/75">
               Communiqués
             </a>
-
-            <a
-              href="#services"
-              className="text-black/75 transition hover:text-white"
+            <button
+              type="button"
+              onClick={afficherServices}
+              className="transition hover:text-white/75"
             >
-              Services
-            </a>
-
-            <a
-              href="#contact"
-              className="text-black/75 transition hover:text-white"
-            >
+              Services et démarches
+            </button>
+            <a href="#contact" className="transition hover:text-white/75">
               Contact
+            </a>
+            <a href="#confidentialite" className="transition hover:text-white/75">
+              Règles et confidentialité
             </a>
           </nav>
 
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setVerificationVisible(true)}
+              className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[12px] font-black text-[#e74405] shadow-sm transition hover:-translate-y-0.5 sm:inline-flex"
+            >
+              <span aria-hidden="true">✓</span>
+              Vérifier un document
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMenuMobileVisible((etat) => !etat)}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-white/10 text-xl xl:hidden"
+              aria-label="Afficher le menu"
+            >
+              {menuMobileVisible ? "×" : "☰"}
+            </button>
+          </div>
         </div>
-      </header>
 
-      {/* Accueil */}
-      <section
-        id="accueil"
-        className="relative overflow-hidden bg-gradient-to-br from-[#050505] via-[#0d0d0d] to-[#07351f]"
-      >
-        <div className="absolute -left-40 top-20 h-96 w-96 rounded-full bg-orange-500/15 blur-3xl" />
-        <div className="absolute -right-40 top-0 h-[520px] w-[520px] rounded-full bg-green-600/20 blur-3xl" />
-
-        <div className="relative mx-auto w-full max-w-[1600px] px-4 pb-11 pt-8 sm:px-6 sm:pb-14 sm:pt-12 lg:px-8 lg:pb-20">
-          <div className="mx-auto w-full text-center">
-            <h2 className="mx-auto max-w-6xl text-[clamp(1.75rem,7.4vw,3.35rem)] font-black leading-[1.08] tracking-[-0.04em] text-white xl:whitespace-nowrap">
-              Une province mieux organisée, plus transparente et connectée
-            </h2>
-
-            <div className="mx-auto mt-6 grid w-full max-w-md grid-cols-2 gap-2.5 sm:mt-8 sm:flex sm:max-w-none sm:justify-center sm:gap-3">
+        {menuMobileVisible && (
+          <nav className="border-t border-white/20 bg-[#e74405] px-4 py-4 xl:hidden">
+            <div className="mx-auto grid max-w-[1500px] gap-2 text-sm font-bold">
+              <a href="#accueil" onClick={() => setMenuMobileVisible(false)} className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Accueil
+              </a>
+              <a href="#professionnels" onClick={() => setMenuMobileVisible(false)} className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Professionnels
+              </a>
+              <a href="#communiques" onClick={() => setMenuMobileVisible(false)} className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Communiqués
+              </a>
               <button
                 type="button"
-                onClick={() => setVerificationVisible(true)}
-                className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#f26522] px-3 text-center text-[12px] font-black leading-tight text-white shadow-lg shadow-orange-950/25 transition duration-300 hover:-translate-y-0.5 hover:bg-orange-500 sm:min-h-14 sm:gap-3 sm:rounded-full sm:px-8 sm:text-sm"
+                onClick={() => {
+                  setMenuMobileVisible(false);
+                  afficherServices();
+                }}
+                className="rounded-lg px-3 py-2 text-left hover:bg-white/10"
+              >
+                Services et démarches
+              </button>
+              <a href="#contact" onClick={() => setMenuMobileVisible(false)} className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Contact
+              </a>
+              <a href="#confidentialite" onClick={() => setMenuMobileVisible(false)} className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Règles et confidentialité
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuMobileVisible(false);
+                  setVerificationVisible(true);
+                }}
+                className="mt-2 rounded-xl bg-white px-4 py-3 text-left font-black text-[#e74405]"
               >
                 Vérifier un document
-
-                <span className="hidden h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg transition-transform group-hover:translate-x-1 sm:flex">
-                  →
-                </span>
               </button>
+            </div>
+          </nav>
+        )}
+      </header>
 
-              <a
-                href="/verification-recu"
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-3 text-center text-[12px] font-black leading-tight text-white backdrop-blur transition hover:-translate-y-0.5 hover:border-emerald-400 hover:bg-emerald-800 sm:min-h-14 sm:rounded-full sm:px-8 sm:text-sm"
-              >
-                Vérifier un reçu
-              </a>
+      <section id="accueil" className="relative overflow-hidden border-b border-neutral-200 bg-white">
+        <div className="mx-auto grid w-full max-w-[1500px] items-center gap-10 px-4 py-12 sm:px-6 md:py-16 lg:grid-cols-[1.15fr_0.85fr] lg:px-8 lg:py-20">
+          <div>
+            <h1 className="max-w-4xl text-[clamp(2rem,5vw,4rem)] font-black leading-[1.04] tracking-[-0.05em] text-neutral-950">
+              Une province mieux organisée, plus transparente et connectée.
+            </h1>
+
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-neutral-600 sm:text-base">
+              Province Connect simplifie vos démarches, renforce la transparence
+              et vous rapproche des services publics.
+            </p>
+
+            <div className="mt-7 grid max-w-2xl gap-4 sm:grid-cols-3">
+              {[
+                ["◉", "Services accessibles", "24 h/24 et 7 j/7"],
+                ["✓", "Données sécurisées", "et confidentielles"],
+                ["✓", "Informations officielles", "et à jour"],
+              ].map(([icone, titre, detail]) => (
+                <div key={titre} className="flex items-start gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-sm font-black text-[#f4510b]">
+                    {icone}
+                  </span>
+                  <div>
+                    <p className="text-xs font-black text-neutral-900 sm:text-sm">
+                      {titre}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-neutral-500 sm:text-xs">
+                      {detail}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pointer-events-none absolute bottom-5 left-0 hidden w-44 space-y-2 lg:block">
+              <div className="h-1.5 rounded-r-full bg-[#f4510b]" />
+              <div className="h-1.5 w-[88%] rounded-r-full bg-[#087b39]" />
+              <div className="h-1.5 w-[76%] rounded-r-full bg-[#e30613]" />
             </div>
           </div>
 
-          {/* Carrousel des communiqués */}
-          <div
-            id="communiques"
-            className="mt-10 scroll-mt-24 sm:mt-14"
-            onMouseEnter={() => setCarouselEnPause(true)}
-            onMouseLeave={() => setCarouselEnPause(false)}
-          >
-            <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400 sm:text-xs">
-                  Actualités de la province
-                </p>
+          <div className="relative mx-auto flex min-h-[250px] w-full max-w-xl items-center justify-center rounded-[32px] border border-orange-100 bg-orange-50/40 p-7">
+            <div className="absolute inset-5 rounded-[28px] border border-dashed border-orange-200" />
 
-                <h3 className="mt-2 text-xl font-black leading-tight tracking-[-0.025em] text-white sm:text-2xl md:text-3xl">
-                  Communiqués et annonces officielles
-                </h3>
-              </div>
+            <div className="relative h-52 w-full">
+              {[
+                ["15%", "62%"],
+                ["32%", "35%"],
+                ["49%", "68%"],
+                ["66%", "30%"],
+                ["80%", "58%"],
+              ].map(([left, top], index) => (
+                <span
+                  key={`${left}-${top}`}
+                  className="absolute h-3 w-3 rounded-full bg-[#f4510b] shadow-[0_0_0_7px_rgba(244,81,11,0.10)]"
+                  style={{ left, top }}
+                  aria-hidden="true"
+                >
+                  {index === 0 ? "" : ""}
+                </span>
+              ))}
 
-              {communiques.length > 1 && (
-                <div className="hidden items-center gap-3 sm:flex">
-                  <button
-                    type="button"
-                    onClick={communiquePrecedent}
-                    className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-2xl text-white backdrop-blur transition hover:border-orange-500 hover:bg-orange-500"
-                    aria-label="Afficher l’affiche précédente"
-                  >
-                    ‹
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={communiqueSuivant}
-                    className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-2xl text-white backdrop-blur transition hover:border-orange-500 hover:bg-orange-500"
-                    aria-label="Afficher l’affiche suivante"
-                  >
-                    ›
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="overflow-hidden rounded-[22px] border border-white/10 bg-black shadow-2xl shadow-black/40 sm:rounded-[30px]">
-              <div
-                className="flex transition-transform duration-700 ease-in-out"
-                style={{
-                  transform: `translateX(-${communiqueActif * 100}%)`,
-                }}
+              <svg
+                viewBox="0 0 600 260"
+                className="absolute inset-0 h-full w-full"
+                aria-hidden="true"
               >
-                {communiques.map((communique) => (
-                  <article
-                    key={communique.id}
-                    className="relative h-[320px] min-w-full overflow-hidden sm:h-[430px] md:h-[480px]"
-                  >
-                    <img
-                      src={communique.image}
-                      alt={communique.titre}
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
+                <path d="M90 165 Q190 35 295 180" fill="none" stroke="#f4510b" strokeWidth="2" opacity=".42" />
+                <path d="M190 90 Q320 10 480 150" fill="none" stroke="#f4510b" strokeWidth="2" opacity=".42" />
+                <path d="M295 180 Q380 55 480 150" fill="none" stroke="#f4510b" strokeWidth="2" opacity=".42" />
+                <path d="M90 165 Q320 235 480 150" fill="none" stroke="#f4510b" strokeWidth="2" opacity=".28" />
+              </svg>
 
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-black/25" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-
-                    <div className="relative flex h-[320px] items-end p-5 sm:h-[430px] sm:p-9 md:h-[480px] md:p-12 lg:items-center">
-                      <div className="max-w-3xl">
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                          <span className="rounded-full bg-[#f26522] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.11em] text-white sm:px-4 sm:py-2 sm:text-[11px]">
-                            {communique.categorie}
-                          </span>
-
-                          <span className="text-[11px] font-bold text-white/80 sm:text-sm">
-                            {communique.date}
-                          </span>
-                        </div>
-
-                        <h4 className="mt-4 line-clamp-2 text-2xl font-black leading-[1.05] tracking-[-0.035em] text-white sm:mt-6 sm:text-3xl md:text-5xl">
-                          {communique.titre}
-                        </h4>
-
-                        <p className="mt-5 hidden max-w-2xl text-base leading-7 text-white/80 sm:block md:text-lg">
-                          {communique.description}
-                        </p>
-
-                        <div className="mt-5 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCommuniqueConsulte(communique)
-                            }
-                            className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-xs font-black text-black shadow-lg transition hover:bg-[#f26522] hover:text-white sm:min-h-12 sm:gap-3 sm:px-6 sm:text-sm"
-                          >
-                            Lire le communiqué
-
-                            <span className="transition-transform group-hover:translate-x-1">
-                              →
-                            </span>
-                          </button>
-
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 sm:text-xs">
-                            Réf. {communique.reference}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                ))}
+              <div className="absolute inset-x-0 bottom-2 text-center">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#f4510b]">
+                  Réseau provincial numérique
+                </p>
+                <p className="mt-2 text-sm text-neutral-500">
+                  Services, documents et informations connectés.
+                </p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="professionnels"
+        className="border-b border-neutral-200 bg-neutral-50 py-7"
+      >
+        <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 px-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+          <div>
+            <p className="text-sm font-black text-neutral-950">
+              Espace professionnels
+            </p>
+            <p className="mt-1 text-xs leading-5 text-neutral-500 sm:text-sm">
+              Commerçants, artistes, enseignants, transporteurs et structures
+              provinciales.
+            </p>
+          </div>
+
+          <a
+            href="/admin/login"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-orange-200 bg-white px-5 text-sm font-black text-[#e74405] shadow-sm transition hover:border-[#f4510b]"
+          >
+            Accéder à l’espace professionnel →
+          </a>
+        </div>
+      </section>
+
+      <section
+        id="communiques"
+        className="scroll-mt-24 border-b border-neutral-200 bg-white py-12 sm:py-16"
+        onMouseEnter={() => setCarouselEnPause(true)}
+        onMouseLeave={() => setCarouselEnPause(false)}
+      >
+        <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8">
+          <div className="mb-6 flex items-center justify-between gap-5">
+            <h2 className="text-xl font-black tracking-tight text-neutral-950 sm:text-2xl">
+              Communiqués récents
+            </h2>
 
             {communiques.length > 1 && (
-              <div className="mt-4 flex items-center justify-between sm:mt-5 sm:justify-center">
-                <div className="flex items-center gap-2">
-                  {communiques.map((communique, index) => (
-                    <button
-                      key={communique.id}
-                      type="button"
-                      onClick={() => setCommuniqueActif(index)}
-                      aria-label={`Afficher l’affiche ${index + 1}`}
-                      className={`h-2.5 rounded-full transition-all duration-300 ${
-                        index === communiqueActif
-                          ? "w-10 bg-orange-500"
-                          : "w-2.5 bg-white/30 hover:bg-white/60"
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2 sm:hidden">
-                  <button
-                    type="button"
-                    onClick={communiquePrecedent}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-lg text-white backdrop-blur"
-                    aria-label="Affiche précédente"
-                  >
-                    ‹
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={communiqueSuivant}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-lg text-white backdrop-blur"
-                    aria-label="Affiche suivante"
-                  >
-                    ›
-                  </button>
-                </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={communiquePrecedent}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-lg shadow-sm transition hover:border-orange-300 hover:text-[#f4510b]"
+                  aria-label="Communiqué précédent"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={communiqueSuivant}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-lg shadow-sm transition hover:border-orange-300 hover:text-[#f4510b]"
+                  aria-label="Communiqué suivant"
+                >
+                  ›
+                </button>
               </div>
             )}
           </div>
-        </div>
-      </section>
 
-      {/* Services */}
-      <section
-        id="services"
-        className="scroll-mt-24 bg-white py-20"
-      >
-        <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-green-700">
-              Services provinciaux
-            </p>
-
-            <h2 className="mt-4 text-3xl font-black tracking-tight text-black md:text-5xl">
-              Les services essentiels sur une seule plateforme
-            </h2>
-
-            <p className="mt-5 text-base leading-8 text-neutral-600">
-              Une solution moderne pour enregistrer, délivrer, gérer et
-              vérifier les documents provinciaux.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {services.map((service) => (
-              <a
-                key={service.numero}
-                href={service.lien}
-                className="group rounded-[28px] border border-black/10 bg-white p-7 shadow-sm transition duration-300 hover:-translate-y-2 hover:border-orange-300 hover:shadow-2xl"
-              >
-                <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-2xl ${service.couleur} font-black text-white shadow-lg`}
+          <div className="overflow-hidden">
+            <div
+              className="flex transition-transform duration-700 ease-in-out"
+              style={{ transform: `translateX(-${communiqueActif * 100}%)` }}
+            >
+              {communiques.map((communique) => (
+                <article
+                  key={communique.id}
+                  className="relative h-[290px] min-w-full overflow-hidden rounded-[24px] bg-neutral-900 shadow-lg sm:h-[360px]"
                 >
-                  {service.numero}
-                </div>
+                  <img
+                    src={communique.image}
+                    alt={communique.titre}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/15" />
 
-                <h3 className="mt-7 text-xl font-black tracking-tight text-black">
-                  {service.titre}
-                </h3>
+                  <div className="relative flex h-full max-w-3xl flex-col justify-end p-6 sm:p-9">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="rounded-full bg-[#f4510b] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white sm:text-[10px]">
+                        {communique.categorie}
+                      </span>
+                      <span className="text-xs font-bold text-white/80">
+                        {communique.date}
+                      </span>
+                    </div>
 
-                <p className="mt-4 text-sm leading-7 text-neutral-600">
-                  {service.description}
-                </p>
+                    <h3 className="mt-4 line-clamp-2 text-2xl font-black leading-tight tracking-tight text-white sm:text-4xl">
+                      {communique.titre}
+                    </h3>
 
-                <p className="mt-6 font-extrabold text-orange-600 transition group-hover:translate-x-1">
-                  {service.action} →
-                </p>
-              </a>
-            ))}
+                    <p className="mt-3 hidden max-w-2xl text-sm leading-6 text-white/75 sm:block">
+                      {communique.description}
+                    </p>
+
+                    <div className="mt-5 flex flex-wrap items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setCommuniqueConsulte(communique)}
+                        className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 text-xs font-black text-neutral-950 transition hover:bg-[#f4510b] hover:text-white sm:text-sm"
+                      >
+                        Lire le communiqué →
+                      </button>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-white/60 sm:text-xs">
+                        Réf. {communique.reference}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
+
+          {communiques.length > 1 && (
+            <div className="mt-5 flex justify-center gap-2">
+              {communiques.map((communique, index) => (
+                <button
+                  key={communique.id}
+                  type="button"
+                  onClick={() => setCommuniqueActif(index)}
+                  className={`h-2.5 rounded-full transition-all ${
+                    index === communiqueActif
+                      ? "w-9 bg-[#f4510b]"
+                      : "w-2.5 bg-neutral-300"
+                  }`}
+                  aria-label={`Afficher le communiqué ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Pied de page */}
-      <footer id="contact" className="bg-black text-white">
-        <div className="mx-auto flex w-full max-w-[1600px] flex-col justify-between gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-500 text-sm font-black text-white">
-              PC
-            </div>
-
+      <section id="services" className="scroll-mt-24 bg-white py-10 sm:py-14">
+        <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-start justify-between gap-4 rounded-[24px] border border-orange-100 bg-orange-50/50 p-5 sm:flex-row sm:items-center sm:p-7">
             <div>
-              <p className="text-lg font-black">Province Connect</p>
-
-              <p className="mt-1 text-sm text-neutral-400">
-                Registre Provincial Numérique
+              <h2 className="text-xl font-black tracking-tight text-neutral-950 sm:text-2xl">
+                Services et démarches
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
+                Les services restent masqués pour garder une page claire.
+                Cliquez sur le bouton pour les afficher.
               </p>
             </div>
+
+            <button
+              type="button"
+              onClick={afficherServices}
+              aria-expanded={servicesVisibles}
+              className="inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#f4510b] px-6 text-sm font-black text-white shadow-sm transition hover:bg-[#df4508] sm:w-auto"
+            >
+              {servicesVisibles
+                ? "Masquer les services"
+                : "Afficher les services et démarches"}
+              <span
+                className={`text-lg transition-transform ${
+                  servicesVisibles ? "rotate-180" : ""
+                }`}
+              >
+                ↓
+              </span>
+            </button>
           </div>
 
-          <div className="flex flex-col items-start gap-3 md:items-end">
-            <div className="flex flex-wrap gap-3">
-              <a
-                href="/verification"
-                className="text-sm font-bold text-neutral-300 transition hover:text-orange-400"
-              >
-                Vérifier un document
-              </a>
+          {servicesVisibles && (
+            <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              {services.map((service) => (
+                <a
+                  key={service.numero}
+                  href={service.lien}
+                  className="group rounded-[20px] border border-neutral-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange-300 hover:shadow-lg"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-sm font-black text-[#f4510b]">
+                    {service.icone}
+                  </div>
 
-              <a
-                href="/verification-recu"
-                className="text-sm font-bold text-neutral-300 transition hover:text-green-400"
-              >
-                Vérifier un reçu
-              </a>
-
-              <a
-                href="/admin/login"
-                className="text-sm font-bold text-neutral-300 transition hover:text-white"
-              >
-                Administration
-              </a>
+                  <h3 className="mt-5 text-sm font-black text-neutral-950">
+                    {service.titre}
+                  </h3>
+                  <p className="mt-3 text-xs leading-5 text-neutral-500">
+                    {service.description}
+                  </p>
+                  <p className="mt-5 text-xs font-black text-[#e74405]">
+                    {service.action} →
+                  </p>
+                </a>
+              ))}
             </div>
+          )}
+        </div>
+      </section>
 
-            <p className="text-sm text-neutral-400">
-              © 2026 Province Connect. Tous droits réservés.
+      <footer
+        id="contact"
+        className="relative border-t border-neutral-200 bg-white"
+      >
+        <div className="mx-auto grid w-full max-w-[1500px] gap-10 px-4 py-10 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f4510b] text-xs font-black text-white">
+                PC
+              </div>
+              <div>
+                <p className="text-sm font-black">
+                  Province <span className="text-[#f4510b]">Connect</span>
+                </p>
+                <p className="text-[10px] text-neutral-500">
+                  Registre Provincial Numérique
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 max-w-xs text-xs leading-6 text-neutral-500">
+              Plateforme provinciale de services transparents, sécurisés et
+              accessibles.
             </p>
           </div>
+
+          <div>
+            <p className="text-xs font-black uppercase tracking-wider text-[#f4510b]">
+              Liens rapides
+            </p>
+            <div className="mt-4 grid gap-2 text-xs font-semibold text-neutral-600">
+              <a href="#accueil">Accueil</a>
+              <a href="#professionnels">Professionnels</a>
+              <a href="#communiques">Communiqués</a>
+              <button type="button" onClick={afficherServices} className="text-left">
+                Services et démarches
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-black uppercase tracking-wider text-[#f4510b]">
+              Contact
+            </p>
+            <div className="mt-4 space-y-2 text-xs leading-5 text-neutral-600">
+              <p>Province Connect</p>
+              <p>Administration provinciale</p>
+              <a href="/admin/login" className="font-black text-[#e74405]">
+                Accès administration
+              </a>
+            </div>
+          </div>
+
+          <div id="confidentialite">
+            <p className="text-xs font-black uppercase tracking-wider text-[#f4510b]">
+              Règles et confidentialité
+            </p>
+            <p className="mt-4 text-xs leading-6 text-neutral-500">
+              Les informations privées des titulaires ne sont jamais affichées
+              publiquement. Seules les données nécessaires à la vérification
+              sont communiquées.
+            </p>
+          </div>
+        </div>
+
+        <div className="h-2 bg-[#f4510b]" />
+        <div className="absolute bottom-0 right-0 hidden w-52 translate-y-1 space-y-1.5 lg:block">
+          <div className="h-1 rounded-l-full bg-[#f4510b]" />
+          <div className="ml-auto h-1 w-[86%] rounded-l-full bg-[#087b39]" />
+          <div className="ml-auto h-1 w-[72%] rounded-l-full bg-[#e30613]" />
         </div>
       </footer>
 
-      {/* Lecture d’un communiqué */}
       {communiqueConsulte && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
         >
-          <article className="my-8 w-full max-w-4xl overflow-hidden rounded-[30px] bg-white shadow-2xl">
-            <div className="relative min-h-64 overflow-hidden">
+          <article className="my-8 w-full max-w-3xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
+            <div className="relative min-h-56 overflow-hidden">
               <img
                 src={communiqueConsulte.image}
                 alt={communiqueConsulte.titre}
                 className="absolute inset-0 h-full w-full object-cover"
               />
-
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/20" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/20" />
 
               <button
                 type="button"
                 onClick={() => setCommuniqueConsulte(null)}
-                className="absolute right-5 top-5 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-xl font-black text-white backdrop-blur transition hover:bg-white/30"
-                aria-label="Fermer le communiqué"
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-lg font-black text-white backdrop-blur"
+                aria-label="Fermer"
               >
                 ×
               </button>
 
-              <div className="relative flex min-h-64 items-end p-6 md:p-8">
+              <div className="relative flex min-h-56 items-end p-6">
                 <div>
-                  <span className="inline-flex rounded-full bg-orange-500 px-4 py-2 text-xs font-black uppercase tracking-wider text-white">
+                  <span className="rounded-full bg-[#f4510b] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white">
                     {communiqueConsulte.categorie}
                   </span>
-
-                  <h3 className="mt-4 max-w-3xl text-3xl font-black leading-tight text-white md:text-4xl">
+                  <h3 className="mt-4 text-2xl font-black leading-tight text-white sm:text-3xl">
                     {communiqueConsulte.titre}
                   </h3>
                 </div>
               </div>
             </div>
 
-            <div className="p-6 md:p-8">
-              <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-neutral-500">
+            <div className="p-6 sm:p-8">
+              <div className="flex flex-wrap gap-3 text-xs font-bold text-neutral-500">
                 <span>{communiqueConsulte.date}</span>
                 <span>•</span>
                 <span>Réf. {communiqueConsulte.reference}</span>
               </div>
-
-              <p className="mt-6 text-lg font-semibold leading-8 text-neutral-700">
+              <p className="mt-5 text-sm font-semibold leading-7 text-neutral-700">
                 {communiqueConsulte.description}
               </p>
-
-              <div className="mt-6 whitespace-pre-line leading-8 text-neutral-700">
+              <div className="mt-5 whitespace-pre-line text-sm leading-7 text-neutral-600">
                 {communiqueConsulte.contenu}
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-3 border-t border-black/10 pt-6">
-                <button
-                  type="button"
-                  onClick={() => setCommuniqueConsulte(null)}
-                  className="rounded-xl bg-black px-5 py-3 text-sm font-extrabold text-white transition hover:bg-orange-500"
-                >
-                  Fermer
-                </button>
-
-                <a
-                  href="/verification"
-                  className="rounded-xl bg-orange-500 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-orange-600"
-                >
-                  Vérifier un document
-                </a>
-              </div>
+              <button
+                type="button"
+                onClick={() => setCommuniqueConsulte(null)}
+                className="mt-7 rounded-xl bg-neutral-950 px-5 py-3 text-sm font-black text-white"
+              >
+                Fermer
+              </button>
             </div>
           </article>
         </div>
       )}
 
-      {/* Fenêtre de vérification */}
       {verificationVisible && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/75 p-3 backdrop-blur-sm sm:p-5"
           role="dialog"
           aria-modal="true"
         >
-          <div className="my-8 w-full max-w-xl rounded-[30px] bg-white p-6 shadow-2xl md:p-8">
-            <div className="flex items-start justify-between gap-5">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-green-700">
-                  Vérification publique
-                </p>
-
-                <h3 className="mt-3 text-3xl font-black tracking-tight text-black">
-                  Vérifiez un document officiel
-                </h3>
-              </div>
-
+          <div className="my-6 w-full max-w-xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
+            <div className="relative bg-[#f4510b] px-6 pb-8 pt-7 text-center text-white sm:px-8 sm:pb-10 sm:pt-9">
               <button
                 type="button"
                 onClick={fermerVerification}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xl font-bold text-neutral-700 transition hover:bg-neutral-200"
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/10 text-lg font-black"
                 aria-label="Fermer"
               >
                 ×
               </button>
+
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/15 text-2xl font-black">
+                ✓
+              </div>
+              <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-white/85 sm:text-xs">
+                Vérification publique
+              </p>
+              <h3 className="mx-auto mt-3 max-w-md text-2xl font-black leading-tight sm:text-3xl">
+                Vérifiez un document officiel
+              </h3>
+              <p className="mx-auto mt-3 max-w-md text-xs leading-6 text-white/85 sm:text-sm">
+                Entrez le numéro d’une carte, d’un permis, d’une autorisation ou
+                d’un reçu provincial.
+              </p>
             </div>
 
-            <p className="mt-5 leading-7 text-neutral-600">
-              Entrez le numéro d’une carte, d’un permis, d’une
-              autorisation ou d’un reçu provincial.
-            </p>
-
-            <form onSubmit={verifierDocument} className="mt-7">
-              <label
-                htmlFor="numero-document"
-                className="mb-2 block text-sm font-extrabold text-black"
-              >
-                Numéro du document
-              </label>
-
-              <input
-                id="numero-document"
-                type="text"
-                value={numeroDocument}
-                onChange={(event) => {
-                  setNumeroDocument(event.target.value);
-                  setMessageVerification("");
-                }}
-                placeholder="Exemple : PC-COM-2026-000001"
-                className="min-h-14 w-full rounded-2xl border border-black/15 bg-neutral-50 px-5 font-semibold outline-none transition focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-100"
-              />
-
-              <button
-                type="submit"
-                className="mt-5 inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-orange-500 px-6 font-extrabold text-white transition hover:bg-orange-600"
-              >
-                Vérifier le document
-                <span>→</span>
-              </button>
-            </form>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <a
-                href="/verification"
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-black/10 bg-neutral-100 px-4 text-sm font-extrabold text-black transition hover:bg-neutral-200"
-              >
-                Page des documents
-              </a>
-
-              <a
-                href="/verification-recu"
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-green-200 bg-green-50 px-4 text-sm font-extrabold text-green-700 transition hover:bg-green-100"
-              >
-                Page des reçus
-              </a>
-            </div>
-
-            {messageVerification && (
-              <div className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm font-medium leading-6 text-orange-900">
-                {messageVerification}
-              </div>
-            )}
-
-            <p className="mt-5 text-sm leading-6 text-neutral-500">
-              Les informations privées du titulaire ne sont jamais
-              affichées publiquement.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Choix des cartes */}
-      {cartesVisibles && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-md"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="my-8 w-full max-w-5xl rounded-[32px] bg-white p-6 shadow-2xl md:p-8">
-            <div className="flex items-start justify-between gap-5">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-600">
-                  Documents provinciaux
-                </p>
-
-                <h3 className="mt-3 text-3xl font-black tracking-tight text-black md:text-4xl">
-                  {carteSelectionnee
-                    ? carteSelectionnee.nom
-                    : "Choisissez le type de carte"}
-                </h3>
-
-                {!carteSelectionnee && (
-                  <p className="mt-4 max-w-2xl leading-7 text-neutral-600">
-                    Sélectionnez le domaine de la carte ou du permis
-                    que vous souhaitez consulter.
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={fermerCartes}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xl font-bold text-neutral-700 transition hover:bg-neutral-200"
-                aria-label="Fermer"
-              >
-                ×
-              </button>
-            </div>
-
-            {!carteSelectionnee ? (
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {typesCartes.map((typeCarte) => (
-                  <button
-                    key={typeCarte.code}
-                    type="button"
-                    onClick={() => setCarteSelectionnee(typeCarte)}
-                    className="group rounded-[24px] border border-black/10 bg-neutral-50 p-5 text-left transition duration-300 hover:-translate-y-1 hover:border-orange-400 hover:bg-white hover:shadow-xl"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-xs font-black text-white transition group-hover:bg-orange-500">
-                      {typeCarte.code}
-                    </div>
-
-                    <p className="mt-5 text-xs font-black uppercase tracking-wider text-green-700">
-                      {typeCarte.categorie}
-                    </p>
-
-                    <h4 className="mt-2 text-lg font-black text-black">
-                      {typeCarte.nom}
-                    </h4>
-
-                    <p className="mt-3 text-sm leading-6 text-neutral-600">
-                      {typeCarte.description}
-                    </p>
-
-                    <p className="mt-5 font-extrabold text-orange-600">
-                      Voir le modèle →
-                    </p>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-8">
-                <button
-                  type="button"
-                  onClick={() => setCarteSelectionnee(null)}
-                  className="mb-6 font-extrabold text-orange-600"
+            <div className="p-5 sm:p-8">
+              <form onSubmit={verifierDocument}>
+                <label
+                  htmlFor="numero-document"
+                  className="mb-2 block text-sm font-black text-neutral-900"
                 >
-                  ← Retour aux types de cartes
+                  Numéro du document
+                </label>
+
+                <input
+                  id="numero-document"
+                  type="text"
+                  value={numeroDocument}
+                  onChange={(event) => {
+                    setNumeroDocument(event.target.value);
+                    setMessageVerification("");
+                  }}
+                  placeholder="Exemple : PC-COM-2026-000001"
+                  className="min-h-14 w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-4 text-sm font-semibold outline-none transition focus:border-[#f4510b] focus:bg-white focus:ring-4 focus:ring-orange-100"
+                />
+
+                <button
+                  type="submit"
+                  className="mt-4 inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#f4510b] px-5 text-sm font-black text-white transition hover:bg-[#df4508]"
+                >
+                  <span>✓</span>
+                  Vérifier un document
+                  <span>→</span>
                 </button>
+              </form>
 
-                <div className="overflow-hidden rounded-[30px] bg-gradient-to-br from-black via-neutral-900 to-green-800 p-1 shadow-2xl">
-                  <div className="rounded-[27px] bg-white p-6 md:p-9">
-                    <div className="flex items-start justify-between gap-5">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-[0.2em] text-green-700">
-                          Province Connect
-                        </p>
-
-                        <h4 className="mt-3 text-2xl font-black text-black md:text-3xl">
-                          {carteSelectionnee.nom}
-                        </h4>
-                      </div>
-
-                      <a
-                        href={`/verification?numero=${encodeURIComponent(
-                          `PC-${carteSelectionnee.code}-2026-000001`,
-                        )}`}
-                        className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-500 font-black text-white transition hover:bg-green-700"
-                        aria-label="Tester la vérification du modèle"
-                      >
-                        QR
-                      </a>
-                    </div>
-
-                    <div className="mt-8 grid gap-7 sm:grid-cols-[140px_1fr]">
-                      <div className="flex h-44 items-center justify-center rounded-2xl bg-neutral-200 text-sm font-semibold text-neutral-500">
-                        Photo
-                      </div>
-
-                      <div className="grid gap-6 sm:grid-cols-2">
-                        <div>
-                          <p className="text-xs font-bold uppercase text-neutral-400">
-                            Titulaire
-                          </p>
-
-                          <p className="mt-2 font-extrabold text-black">
-                            Exemple de titulaire
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-xs font-bold uppercase text-neutral-400">
-                            Catégorie
-                          </p>
-
-                          <p className="mt-2 font-extrabold text-black">
-                            {carteSelectionnee.categorie}
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-xs font-bold uppercase text-neutral-400">
-                            Numéro
-                          </p>
-
-                          <p className="mt-2 font-extrabold text-black">
-                            PC-{carteSelectionnee.code}-2026-000001
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-xs font-bold uppercase text-neutral-400">
-                            Statut
-                          </p>
-
-                          <span className="mt-2 inline-flex rounded-full bg-green-100 px-4 py-2 text-sm font-extrabold text-green-800">
-                            Document valide
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-8 flex flex-col gap-4 border-t border-black/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                      <span className="text-sm text-neutral-500">
-                        Service fiable. Province connectée.
-                      </span>
-
-                      <a
-                        href={`/verification?numero=${encodeURIComponent(
-                          `PC-${carteSelectionnee.code}-2026-000001`,
-                        )}`}
-                        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-black px-5 text-sm font-extrabold text-white transition hover:bg-orange-500"
-                      >
-                        Tester la vérification
-                      </a>
-                    </div>
-                  </div>
-                </div>
+              <div className="my-5 flex items-center gap-3">
+                <div className="h-px flex-1 bg-neutral-200" />
+                <span className="text-[10px] font-black uppercase text-neutral-400">
+                  ou
+                </span>
+                <div className="h-px flex-1 bg-neutral-200" />
               </div>
-            )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <a
+                  href="/verification"
+                  className="inline-flex min-h-12 items-center justify-between rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-800 transition hover:border-orange-300"
+                >
+                  <span>▤ Page des documents</span>
+                  <span>›</span>
+                </a>
+                <a
+                  href="/verification-recu"
+                  className="inline-flex min-h-12 items-center justify-between rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-800 transition hover:border-green-300"
+                >
+                  <span>▧ Page des reçus</span>
+                  <span>›</span>
+                </a>
+              </div>
+
+              {messageVerification && (
+                <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs font-semibold leading-5 text-orange-900">
+                  {messageVerification}
+                </div>
+              )}
+
+              <p className="mt-5 text-center text-[11px] leading-5 text-neutral-500">
+                🔒 Les informations privées du titulaire ne sont jamais
+                affichées publiquement.
+              </p>
+            </div>
           </div>
         </div>
       )}
